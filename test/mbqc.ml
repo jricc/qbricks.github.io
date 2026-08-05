@@ -132,6 +132,11 @@ let owm =
        -- cx 0 4) ); *)
     ("cxh", `Quick, test_owm (cx 3 1 -- h 1));
     ("ccxoq2", `Quick, test_owm (ccxoq2 0 1 2));
+    (* Exercise OWM directly so OpenQASM export cannot hide missing
+       multi-controlled-gate preprocessing. *)
+    ( "three-controlled x",
+      `Quick,
+      test_owm (Program.Apply (Gates.X, [ 0; 1; 2 ], [ 3 ])) );
     ("x_qb", `Quick, test_owm (x_qb 0));
     ("crzdecomp", `Quick, test_owm (crzdecomp 1 0 1));
     ("cu1decomp", `Quick, test_owm (cu1decomp ~s:(-1) 5 0 1));

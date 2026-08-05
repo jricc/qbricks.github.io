@@ -33,9 +33,6 @@ type deferred_measurement_error =
       (** A reset/initialization targets a qubit that was already used.
           SQbricks currently supports [InitQ] only for fresh qubits, not as
           dynamic reset or discard/reuse. *)
-  | ClassicalControlWithoutMeasurement of int
-      (** A classical control bit is used before any measurement stored a result
-          in that bit. *)
   | MeasuredQubitUsedAfterMeasurement of Program.t
       (** A quantum operation uses a qubit after it has been measured. *)
   | UnsupportedConditionalProgram of Program.t
@@ -50,7 +47,9 @@ val to_deferred_measurements_result :
   Program.t ->
   (Program.t * int list * int list, deferred_measurement_error) result
 (** [to_deferred_measurements_result ?debug prog] converts [prog] to deferred
-    measurement form, or reports the first unsupported or malformed construct. *)
+    measurement form, or reports the first unsupported or malformed construct.
+    Classical bits are initially zero; a measurement replaces that constant
+    value with the corresponding deferred quantum control. *)
 
 val to_deferred_measurements :
   ?debug:bool -> Program.t -> Program.t * int list * int list

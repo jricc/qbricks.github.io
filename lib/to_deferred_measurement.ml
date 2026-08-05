@@ -30,7 +30,6 @@ type deferred_measurement_error =
   | InvalidClassicalBit of int * int
   | InvalidQubitIndex of int * int
   | ResetOfUsedQubitUnsupported of int
-  | ClassicalControlWithoutMeasurement of int
   | MeasuredQubitUsedAfterMeasurement of Program.t
   | UnsupportedConditionalProgram of Program.t
 
@@ -49,11 +48,6 @@ let deferred_measurement_error_message = function
         "Translation.to_deferred_measurements, reset/init of already used qubit \
          %d is not supported"
         qubit
-  | ClassicalControlWithoutMeasurement bit ->
-      sprintf
-        "Translation.to_deferred_measurements, classical control bit %d does \
-         not store a measurement result"
-        bit
   | MeasuredQubitUsedAfterMeasurement p ->
       sprintf
         "Translation.to_deferred_measurements, measured qubit used after \
@@ -72,7 +66,10 @@ let to_deferred_measurements_result ?(debug = false) p =
     printf "2. Translation.to_deferred_measurements, p =\n%s\n\n"
       (ProgS.pretty p);
 
+  (* Classical bits start at zero. Once measured, [bit_to_qubit] identifies the
+     qubit that carries their deferred value instead. *)
   let bit_to_qubit = Array.make wc (-1) in
+  let constant_bit_values = Array.make wc false in
 
   let check_classical_bit bit =
     if bit < 0 || wc <= bit then Error (InvalidClassicalBit (wc, bit))
@@ -92,13 +89,13 @@ let to_deferred_measurements_result ?(debug = false) p =
         | Error error -> Error error)
   in
 
-  let measured_qubit_of_bit bit =
+  let classical_control_of_bit bit =
     match check_classical_bit bit with
     | Error error -> Error error
     | Ok () ->
         let qubit = bit_to_qubit.(bit) in
-        if qubit = -1 then Error (ClassicalControlWithoutMeasurement bit)
-        else Ok qubit
+        if qubit = -1 then Ok (`Constant constant_bit_values.(bit))
+        else Ok (`Measured qubit)
   in
 
   let is_wires_available measured_qubits wires_to_check =
@@ -134,6 +131,7 @@ let to_deferred_measurements_result ?(debug = false) p =
         | Error error, _ | _, Error error -> Error error
         | Ok (), Ok () ->
             bit_to_qubit.(bit_indice) <- qubit_indice;
+            constant_bit_values.(bit_indice) <- false;
             Ok
               ( E,
                 inits,
@@ -147,19 +145,22 @@ let to_deferred_measurements_result ?(debug = false) p =
 
         let rec bits_to_qubits bits_indices =
           match bits_indices with
-          | [] -> Ok []
+          | [] -> Ok (Some [])
           | bit_indice :: bits_indices_remain -> (
-              match measured_qubit_of_bit bit_indice with
+              match classical_control_of_bit bit_indice with
               | Error error -> Error error
-              | Ok qubit_indice -> (
+              | Ok (`Constant false) -> Ok None
+              | Ok (`Constant true) -> bits_to_qubits bits_indices_remain
+              | Ok (`Measured qubit_indice) -> (
                   if debug then
                     printf
                       "Translation.to_deferred_measurements.bits_to_qubits, \
                        qubit_indice = %d\n\n"
                       qubit_indice;
                   match bits_to_qubits bits_indices_remain with
-                  | Ok qubits_indices_remain ->
-                      Ok (qubit_indice :: qubits_indices_remain)
+                  | Ok (Some qubits_indices_remain) ->
+                      Ok (Some (qubit_indice :: qubits_indices_remain))
+                  | Ok None -> Ok None
                   | Error error -> Error error))
         in
 
@@ -174,7 +175,8 @@ let to_deferred_measurements_result ?(debug = false) p =
             else
               (match bits_to_qubits bits_indices with
               | Error error -> Error error
-              | Ok qubits_indices ->
+              | Ok None -> Ok (E, inits, meas, used_qubits)
+              | Ok (Some qubits_indices) ->
                   (if debug then
                     printf
                       "Translation.to_deferred_measurements.It, qubits_indices \
@@ -204,12 +206,22 @@ let to_deferred_measurements_result ?(debug = false) p =
             match aux ~debug p2 l1 l1' used_qubits' with
             | Error error -> Error error
             | Ok (p2', l2, l2', used_qubits'') ->
-                Ok (Sequence (p1', p2'), l2, l2', used_qubits'')))
+                (* Translation can turn either side into [E], notably when a
+                   condition is decided from constant classical bits. *)
+                let deferred_sequence =
+                  match (p1', p2') with
+                  | E, program | program, E -> program
+                  | _ -> Sequence (p1', p2')
+                in
+                Ok (deferred_sequence, l2, l2', used_qubits'')))
     | E -> Ok (E, inits, meas, used_qubits)
     | Not bit_indice -> (
-        match measured_qubit_of_bit bit_indice with
+        match classical_control_of_bit bit_indice with
         | Error error -> Error error
-        | Ok qubit_indice ->
+        | Ok (`Constant value) ->
+            constant_bit_values.(bit_indice) <- not value;
+            Ok (E, inits, meas, used_qubits)
+        | Ok (`Measured qubit_indice) ->
             Ok
               ( x qubit_indice,
                 inits,

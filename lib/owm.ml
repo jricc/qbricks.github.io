@@ -64,8 +64,12 @@ let ( --- ) p1 p2 : t = Sequence (p1, p2)
 
 let rec preprocess (p : Program.t) : Program.t =
   match p with
+  | Apply (X, [ co1; co2; co3 ], [ ta ]) ->
+      preprocess (c3xdecomp co1 co2 co3 ta)
   | Apply (X, [ co1; co2 ], [ ta ]) -> ccxoq2 co1 co2 ta
   | Apply (H, [ co ], [ ta ]) -> chdecomp co ta
+  | Apply (U1 (num, k), [ co1; co2 ], [ ta ]) ->
+      preprocess (ccu1decomp ~s:(Q.to_int num) k co1 co2 ta)
   | Apply (U1 (num, k), [ co ], [ ta ]) ->
       let angle = Q.div_2exp num k in
       if angle = div2 then h ta -- cx co ta -- h ta

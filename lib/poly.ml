@@ -819,20 +819,33 @@ let of_qubit_2_pi ?(debug = false) (q : Qubit.t) : t =
 (* `s` is the poly scalar *)
 (* Prod(Scal s, (lift p) *)
 let lift ?(debug = false) (p : t) (s : Q.t) : t =
-  let rec aux (p : t) : t =
+  let print_debug p =
     if debug then printf "Poly.lift, p = %s\n\n" (String.exact p);
+  in
+  (* [coef] stays constant while the polynomial is split recursively. *)
+  let rec aux coef (p : t) : t =
+    print_debug p;
     if equal p empty then empty
     else
       let m1, p1_remain = (find p, del p) in
       if equal p1_remain empty then m1 ++ empty
       else
-        let p1_remain_lifted = simplify_monomes (aux p1_remain) in
-        let coef = coef_lift s in
-        if Q.equal coef Q.zero then m1 ++ p1_remain_lifted
-        else
-          m1 ++ (p1_remain_lifted @@ distribution ~s1:coef m1 p1_remain_lifted)
+        let p1_remain_lifted = simplify_monomes (aux coef p1_remain) in
+        (* Example: [m1 = x0], [remainder = x1], and [coef = 2] give
+           [x0 + x1 + 2*x0*x1]. *)
+        m1 ++ (p1_remain_lifted @@ distribution ~s1:coef m1 p1_remain_lifted)
   in
-  aux p
+  (* Examples: [lift(0) = 0] and [lift(x0) = x0]. *)
+  if size p <= 1 then (
+    print_debug p;
+    p)
+  else
+    let coef = coef_lift s in
+    (* Example: [coef = 0] gives [x0 + x1 + 0*x0*x1 = x0 + x1], so return [p]. *)
+    if Q.equal coef Q.zero then (
+      print_debug p;
+      p)
+    else aux coef p
 
 type to_qubit_error = CannotConvertScalarMonomeToQubit of Q.t
 

@@ -269,17 +269,26 @@ let test_unitary_is_only_a_hybrid_syntax_check () =
   check bool "malformed unitary-shaped gate accepted" true
     (Program.unitary (Program.Apply (Gates.H, [], [])))
 
-let test_deferred_measurement_reports_not_without_measurement () =
-  match To_deferred_measurement.to_deferred_measurements_result (notC 0) with
-  | Error (To_deferred_measurement.ClassicalControlWithoutMeasurement 0) ->
-      check bool "classical bit without measurement" true true
-  | _ -> check bool "classical bit without measurement expected" true false
+let test_deferred_measurement_tracks_not_on_initial_zero () =
+  match
+    To_deferred_measurement.to_deferred_measurements_result
+      (notC 0 -- it 0 (x 1))
+  with
+  | Ok (program, inits, meas) ->
+      check string "condition made true" (ProgS.exact (x 1))
+        (ProgS.exact program);
+      check string "deferred inits" "[]" (ListBis.string_int inits);
+      check string "deferred meas" "[]" (ListBis.string_int meas)
+  | Error _ -> check bool "initial classical zero expected" true false
 
-let test_deferred_measurement_reports_it_without_measurement () =
+let test_deferred_measurement_skips_false_initial_condition () =
   match To_deferred_measurement.to_deferred_measurements_result (it 0 (x 1)) with
-  | Error (To_deferred_measurement.ClassicalControlWithoutMeasurement 0) ->
-      check bool "conditional bit without measurement" true true
-  | _ -> check bool "conditional bit without measurement expected" true false
+  | Ok (program, inits, meas) ->
+      check string "false initial condition" (ProgS.exact Program.E)
+        (ProgS.exact program);
+      check string "deferred inits" "[]" (ListBis.string_int inits);
+      check string "deferred meas" "[]" (ListBis.string_int meas)
+  | Error _ -> check bool "initial classical zero expected" true false
 
 let test_deferred_measurement_reports_invalid_measurement_bit () =
   match To_deferred_measurement.to_deferred_measurements_result (m 0 (-1)) with
@@ -298,6 +307,22 @@ let test_deferred_measurement_translates_simple_condition () =
       check string "deferred inits" "[]" (ListBis.string_int inits);
       check string "deferred meas" "[0]" (ListBis.string_int meas)
   | Error _ -> check bool "simple condition expected" true false
+
+let test_deferred_measurement_translates_partially_measured_condition () =
+  (* This is the shape produced by [if (c == 1)] when only c[0] has been
+     measured: the untouched bits c[1] and c[2] still satisfy their expected
+     zero values. *)
+  let program =
+    m 0 0 -- notC 1 -- notC 2 -- itl [ 0; 1; 2 ] (x 3) -- notC 1
+    -- notC 2
+  in
+  match To_deferred_measurement.to_deferred_measurements_result program with
+  | Ok (program, inits, meas) ->
+      check string "partially measured condition" (ProgS.exact (cx 0 3))
+        (ProgS.exact program);
+      check string "deferred inits" "[]" (ListBis.string_int inits);
+      check string "deferred meas" "[0]" (ListBis.string_int meas)
+  | Error _ -> check bool "partially measured condition expected" true false
 
 let test_deferred_measurement_keeps_all_measured_qubits_unavailable () =
   match
@@ -498,6 +523,17 @@ let test_openqasm_one_creg_keeps_complete_program () =
   in
   check string "single classical register export" expected
     (To_openqasm.string_oq ~one_creg:true (h 0 -- m 0 0))
+
+let test_openqasm_exports_three_controlled_x () =
+  (* The exported decomposition must remain equivalent after a QASM
+     round-trip; emitting an unsupported custom instruction is not enough. *)
+  let three_controlled_x =
+    Program.Apply (Gates.X, [ 0; 1; 2 ], [ 3 ])
+  in
+  let qasm = To_openqasm.string_oq three_controlled_x in
+  with_temporary_parser_input ".qasm" qasm (fun path ->
+      let exported_program = to_prog path in
+      test_prog_equiv ~debug:false three_controlled_x exported_program ())
 
 let test_openqasm_rejects_unsupported_controlled_gate () =
   (* A control arity unsupported by OpenQASM export must fail explicitly. It
@@ -934,18 +970,21 @@ let unitary =
     ( "unitary is only a hybrid syntax check",
       `Quick,
       test_unitary_is_only_a_hybrid_syntax_check );
-    ( "deferred measurement reports not without measurement",
+    ( "deferred measurement tracks not on initial zero",
       `Quick,
-      test_deferred_measurement_reports_not_without_measurement );
-    ( "deferred measurement reports it without measurement",
+      test_deferred_measurement_tracks_not_on_initial_zero );
+    ( "deferred measurement skips false initial condition",
       `Quick,
-      test_deferred_measurement_reports_it_without_measurement );
+      test_deferred_measurement_skips_false_initial_condition );
     ( "deferred measurement reports invalid measurement bit",
       `Quick,
       test_deferred_measurement_reports_invalid_measurement_bit );
     ( "deferred measurement translates simple condition",
       `Quick,
       test_deferred_measurement_translates_simple_condition );
+    ( "deferred measurement translates partially measured condition",
+      `Quick,
+      test_deferred_measurement_translates_partially_measured_condition );
     ( "deferred measurement keeps all measured qubits unavailable",
       `Quick,
       test_deferred_measurement_keeps_all_measured_qubits_unavailable );
@@ -1003,6 +1042,9 @@ let unitary =
     ( "openqasm one creg keeps complete program",
       `Quick,
       test_openqasm_one_creg_keeps_complete_program );
+    ( "openqasm exports three-controlled X",
+      `Quick,
+      test_openqasm_exports_three_controlled_x );
     ( "openqasm rejects unsupported controlled gate",
       `Quick,
       test_openqasm_rejects_unsupported_controlled_gate );
@@ -1018,6 +1060,28 @@ let unitary =
     ("cx = hczh", `Quick, test_prog_equiv (h 1 -- cz 0 1 -- h 1) (cx 0 1));
     ("ccx = ccxoq2", `Quick, test_prog_equiv (ccxoq2 0 1 2) (ccx 0 1 2));
     ("ccx = ccxoq2", `Quick, test_prog_equiv (ccxoq2 3 5 0) (ccx 3 5 0));
+    (* Compare the decomposition with the primitive multi-control semantics.
+       These cases exercise both register boundaries and non-ordered wires. *)
+    ( "c3xdecomp = c3x, contiguous indices",
+      `Quick,
+      test_prog_equiv
+        (c3xdecomp 0 1 2 3)
+        (Program.Apply (Gates.X, [ 0; 1; 2 ], [ 3 ])) );
+    ( "c3xdecomp = c3x, target at index zero",
+      `Quick,
+      test_prog_equiv
+        (c3xdecomp 1 2 3 0)
+        (Program.Apply (Gates.X, [ 1; 2; 3 ], [ 0 ])) );
+    ( "c3xdecomp = c3x, non-ordered controls",
+      `Quick,
+      test_prog_equiv
+        (c3xdecomp 6 2 5 1)
+        (Program.Apply (Gates.X, [ 6; 2; 5 ], [ 1 ])) );
+    ( "c3xdecomp = c3x, sparse boundary indices",
+      `Quick,
+      test_prog_equiv
+        (c3xdecomp 9 0 5 2)
+        (Program.Apply (Gates.X, [ 9; 0; 5 ], [ 2 ])) );
     ("x_qb", `Quick, test_prog_equiv (x_qb 0) (x 0));
     ("ccx_qb", `Quick, test_prog_equiv (ccx_qb 0 1 2) (ccx 0 1 2));
     ("gp 2 -- gp 2 = gp 1", `Quick, test_prog_equiv (gp 2 -- gp 2) (gp 1));

@@ -487,6 +487,11 @@ let equal_result ?(debug = false) ?(outputs1 = []) ?(outputs2 = [])
             Poly.equal_result ~global_phase ~debug ~wq1 ~wq2 ~map_path_var1
               ~map_path_var2 poly_output1 poly_output2
           with
+          | Error Poly.IncompletePathVariableMap ->
+              (* Ket equality builds a consistent partial bijection. A
+                 one-sided phase lookup therefore means that the phases differ,
+                 not that either path sum is malformed. *)
+              Ok false
           | Error error -> Error (equality_error_of_poly error)
           | Ok polys_equal ->
               if debug then

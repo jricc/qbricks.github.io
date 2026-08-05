@@ -132,6 +132,7 @@ function read_baseline_row(key, ck, status, case_level) {
 	key = row_key()
 	ck = case_key()
 	status = $NF
+	sub(/\r$/, "", status)
 	case_level = is_case_level_row()
 	if (key in baseline_status) {
 		duplicate_baseline_count++
@@ -159,6 +160,7 @@ function compare_current_row(key, ck, current, case_level, baseline) {
 	key = row_key()
 	ck = case_key()
 	current = $NF
+	sub(/\r$/, "", current)
 	case_level = is_case_level_row()
 	if (key in current_seen) {
 		duplicate_current_count++
@@ -222,11 +224,12 @@ BEGIN {
 }
 
 {
-	sub(/\r$/, "", $0)
+	# mawk 1.3.4 may leave NF stale until a positional field is read.
+	first_field = $1
 }
 
 NR == FNR {
-	if ($0 == "" || $0 ~ /^Program/) next
+	if ($0 == "" || $0 == "\r" || $0 ~ /^Program/) next
 	if (NF != 13 && NF != 14) {
 		format_error_count++
 		format_messages[format_error_count] = FILENAME ":" FNR ": " NF " fields"
@@ -240,7 +243,7 @@ FNR == 1 {
 	next
 }
 
-$0 == "" {
+$0 == "" || $0 == "\r" {
 	next
 }
 

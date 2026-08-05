@@ -556,6 +556,17 @@ module Macros = struct
     in
     output
 
+  (* V = H.S.H satisfies V^2 = X. *)
+  let c3xdecomp co1 co2 co3 ta : t =
+    let controlled_controlled_v s control1 control2 target =
+      h target -- ccu1 ~s 2 control1 control2 target -- h target
+    in
+    controlled_controlled_v 1 co2 co3 ta
+    -- ccx co1 co2 co3
+    -- controlled_controlled_v (-1) co2 co3 ta
+    -- ccx co1 co2 co3
+    -- controlled_controlled_v 1 co1 co2 ta
+
   let crzdecomp ?(s = 1) k co ta : t =
     u1 ~s (k + 1) ta -- cx co ta -- u1 ~s:(-s) (k + 1) ta -- cx co ta
 

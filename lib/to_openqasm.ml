@@ -65,6 +65,8 @@ let to_qasm ?(one_creg = false) ?(debug = false) (p : Program.t) : t =
     | Apply (X, [], [ ta ]) -> X ta
     | Apply (X, [ co ], [ ta ]) -> CX (co, ta)
     | Apply (X, [ co1; co2 ], [ ta ]) -> CCX (co1, co2, ta)
+    | Apply (X, [ co1; co2; co3 ], [ ta ]) ->
+        aux (c3xdecomp co1 co2 co3 ta)
     | Apply (U1 (s, k), [], [ ta ]) ->
         let angle = Q.div_2exp s (k - 1) in
         U1 (angle, ta)

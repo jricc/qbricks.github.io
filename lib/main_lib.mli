@@ -200,8 +200,11 @@
 
     - [in.qasm]: Input QASM file
     - [out.qasm]: Output QASM file
-    - [dm]: Deferred measurement flag (true/false)
-    - [Return]: list of inputs and outputs index
+    - [dm]: when true, converts the input before OWM and the generated OWM
+      circuit after the transformation to deferred-measurement unitary form;
+      both conversions stay in memory
+    - [Return]: input and output indices, followed by measured indices when
+      [dm] is true
 
     Example:
     {[

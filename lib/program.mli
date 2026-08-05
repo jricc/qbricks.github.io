@@ -274,6 +274,9 @@ module Macros : sig
   val ccxoq2 : int -> int -> int -> t
   (** [ccxoq2 c1 c2 target] CCX gate with specific decomposition. *)
 
+  val c3xdecomp : int -> int -> int -> int -> t
+  (** [c3xdecomp c1 c2 c3 target] decomposes a three-controlled X gate. *)
+
   val ccz : int -> int -> int -> t
   (** [ccz c1 c2 target] CCZ gate. *)
 

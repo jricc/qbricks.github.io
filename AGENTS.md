@@ -64,8 +64,11 @@
   TikZ/Qcircuit code. In the Docker image, install the current CTAN Quantikz
   files at the end of the `Dockerfile` so rebuilds keep the heavier layers
   cached.
-* In quality mode, keep both technical documentation files up to date: `doc/SQbricks.md` and `doc/SQbricks.en.md`.
-* Update the technical documentation incrementally after each validated function or behavior.
+* In quality mode, keep `doc/SQbricks.md` and `doc/SQbricks.en.md` aligned when
+  a stable public behavior, contract, limitation, or workflow changes.
+* Keep function-level details in `odoc` comments, public interfaces, and tests.
+  Keep unpublished proofs, commit studies, and experimental measurements in a
+  private technical report outside this repository.
 
 Before coding, state the minimal solution in 2–5 lines.
 If a more generic design is possible, mention it only as an alternative, but do not implement it unless explicitly requested.
@@ -84,6 +87,8 @@ If a more generic design is possible, mention it only as an alternative, but do 
   The user handles Git operations manually.
 - Document important choices, limitations, and edge cases.
 - Avoid comments that merely repeat the code.
+- Prefer one or two short, concrete examples over a long abstract comment when
+  examples make the behavior or invariant easier to understand.
 - Use descriptive variable and function names. Avoid generic names such as
   `f`, `input`, `output`, or `aux` when a domain-specific name would make the
   code easier to read.
@@ -294,20 +299,23 @@ Do not claim the tests passed unless the user reports it or you actually ran the
 
 ### Step 9: Living SQbricks documentation
 
-After the user validates a function, update both `doc/SQbricks.md` (French) and
-`doc/SQbricks.en.md` (English) before moving to the next function.
+After the user validates a stable public behavior, contract, limitation, or
+workflow, update both `doc/SQbricks.md` (French) and `doc/SQbricks.en.md`
+(English) before moving to the next subsystem.
 
-These two versions form the same documentation and must remain functionally
-aligned in the same change. This documentation is distinct from the concise
-`README.md`. It must:
+These two versions form the same public technical overview and must remain
+functionally aligned in the same change. This documentation is distinct from
+the concise `README.md`. It must:
 
-- progressively provide an exhaustive technical view of SQbricks;
 - remain pedagogical and make the purpose and execution flow easy to grasp;
-- explain each validated function's role, callers, inputs, outputs, errors,
-  important state, and invariants;
-- connect implementation details to the subsystem and user workflow they serve;
-- document only reviewed behavior, and clearly mark incomplete sections;
-- be updated incrementally instead of postponed until the end of the work.
+- describe stable architecture, workflows, observable contracts, errors, and
+  supported or unsupported behavior;
+- avoid exhaustive function-by-function implementation histories;
+- leave function-level details to `odoc` comments, `.mli` interfaces, and tests;
+- leave unpublished proofs, commit investigations, raw experiments, and
+  machine-specific measurements in a private technical report outside this
+  repository;
+- document only reviewed behavior and clearly mark incomplete public features.
 
 ### Step 10: Next function
 

@@ -23,6 +23,37 @@
 
 ## Later roadmap work
 
+- [ ] On a dedicated `owm-multicontrol` branch, audit and correct the
+  multi-controlled-gate pipeline used by `owm-vs-qiskit`: make the lowering
+  before OWM explicit instead of relying implicitly on `To_openqasm`
+  serialization, preserve exact semantics, and measure the gate-count growth.
+- [ ] On a separate `reduction-performance` branch, locate and correct the
+  large-benchmark slowdowns where the baseline and current gate counts are
+  identical, notably in `owm`, `tele`, and `owm-vs-tele`, before changing their
+  performance baselines.
+- [x] Reduce repeated HH candidate scans on `owm/gf2^9mult_89_413`: profiling
+  observed 3,596 `hh_aux` calls from 4 `HH.hh` calls in Sequence, and 1,798
+  `hh_aux` calls from 3 `HH.hh` calls in Parallel. The validated phase prefilter
+  preserves path-variable order and reduces the normalized Sequence-specific
+  cost by approximately 16%.
+- [x] Avoid two redundant polynomial simplifications during successive HH
+  reductions. `hh_aux` already simplifies the substituted phase and ket, and
+  the final phase simplification also handles an unsimplified `R`. On the
+  focused uninstrumented `owm/gf2^9mult_89_413` case, Sequence decreased from
+  `399.31 s` to `336.88 s` and Parallel from `232.86 s` to `203.17 s`.
+- [ ] Profile the denominators and monomial counts received by `Poly.lift` on
+  representative `1/4` and `1/8` cases before deciding whether to truncate
+  dyadic lifts by degree.
+- [ ] Recheck the optimized HH implementation with the large `owm` regression
+  under stable machine conditions. The 2026-08-02 run improved the targeted
+  `gf2` cases, but remained inconclusive because unrelated cases close to the
+  600-second resource boundary became `OutOfMemory` or were skipped. Do not
+  update the large baseline from that run.
+- [ ] Make the large regression checker report a changed gate-count signature
+  as a workload change instead of comparing its execution time with the old
+  performance baseline.
+- [ ] Add flexible unit-test runtime regression tracking that remains useful as
+  new tests are added, instead of comparing only the total test-suite duration.
 - [ ] Add OpenQASM export support for `H` gates with an arbitrary number of
   controls. Symbolic execution already supports them, but the OpenQASM 2
   exporter currently rejects them because it has no decomposition for them.

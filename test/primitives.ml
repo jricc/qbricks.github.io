@@ -186,6 +186,77 @@ let test_hh_explicitly_removes_matched_pair () =
   check string "matched path variables are removed together"
     (PSS.exact expected) (PSS.exact output)
 
+let test_hh_skips_unmatched_candidate_before_match () =
+  (* phase = 1/2 y1y2, ket = |y2>, path variables = [y0; y1; y2].
+     The absent y0 is ignored, then HH applies to y1 and y2. *)
+  let phase =
+    Prod (Scal div2, Prod (Qubit (v 2), Qubit (v 3))) +++ Poly.empty
+  in
+  let input : Path_sum.t =
+    { phase; ket = [| v 3 |]; path_var = [ 1; 2; 3 ] }
+  in
+  let expected : Path_sum.t =
+    { phase = p0; ket = [| zero |]; path_var = [ 1 ] }
+  in
+  let output =
+    match Rules.HH.hh input with
+    | Ok output -> output
+    | Error (Rules.MalformedPathSum message) ->
+        Alcotest.fail ("unexpected malformed path sum: " ^ message)
+  in
+  check string "unmatched candidate before HH match" (PSS.exact expected)
+    (PSS.exact output)
+
+let test_hh_applies_two_successive_matches () =
+  (* phase = 1/2 y0y1 + 1/2 y2y3, ket = |y1 + y3>.
+     The first HH match removes y0,y1; the second removes y2,y3. *)
+  let phase =
+    Prod (Scal div2, Prod (Qubit (v 1), Qubit (v 2)))
+    +++ (Prod (Scal div2, Prod (Qubit (v 3), Qubit (v 4))) +++ Poly.empty)
+  in
+  let input : Path_sum.t =
+    { phase; ket = [| v 2 ++ v 4 |]; path_var = [ 1; 2; 3; 4 ] }
+  in
+  let expected : Path_sum.t =
+    { phase = p0; ket = [| zero |]; path_var = [] }
+  in
+  let output =
+    match Rules.HH.hh input with
+    | Ok output -> output
+    | Error (Rules.MalformedPathSum message) ->
+        Alcotest.fail ("unexpected malformed path sum: " ^ message)
+  in
+  check string "two successive HH matches" (PSS.exact expected)
+    (PSS.exact output)
+
+let test_hh_simplifies_remainder_after_substitution () =
+  (* phase = 1/2 y0(yi + Q) + R and ket = |yi>, with yi = y1, Q = x0,
+     and R = 1/4 y1 + 1/4 y1. Substitution gives R[yi <- Q] = 1/2 x0. *)
+  let remainder_term : Monome.t = Prod (Scal div4, Qubit (v 2)) in
+  let phase =
+    Prod (Scal div2, Prod (Qubit (v 1), Qubit (v 2)))
+    +++ (Prod (Scal div2, Prod (Qubit (v 1), Qubit x0))
+         +++ (remainder_term +++ (remainder_term +++ Poly.empty)))
+  in
+  let input : Path_sum.t =
+    { phase; ket = [| v 2 |]; path_var = [ 1; 2 ] }
+  in
+  let expected : Path_sum.t =
+    {
+      phase = Prod (Scal div2, Qubit x0) +++ Poly.empty;
+      ket = [| x0 |];
+      path_var = [];
+    }
+  in
+  let output =
+    match Rules.HH.hh input with
+    | Ok output -> output
+    | Error (Rules.MalformedPathSum message) ->
+        Alcotest.fail ("unexpected malformed path sum: " ^ message)
+  in
+  check string "remainder simplified after substitution" (PSS.exact expected)
+    (PSS.exact output)
+
 let test_reduction_algorithm_reports_malformed_path_sum () =
   let malformed =
     match
@@ -210,6 +281,15 @@ let hh =
     ( "hh explicitly removes its matched pair",
       `Quick,
       test_hh_explicitly_removes_matched_pair );
+    ( "hh skips an unmatched candidate before a match",
+      `Quick,
+      test_hh_skips_unmatched_candidate_before_match );
+    ( "hh applies two successive matches",
+      `Quick,
+      test_hh_applies_two_successive_matches );
+    ( "hh simplifies its remainder after substitution",
+      `Quick,
+      test_hh_simplifies_remainder_after_substitution );
     ( "reduction_algorithm reports malformed path sum",
       `Quick,
       test_reduction_algorithm_reports_malformed_path_sum );
@@ -1586,6 +1666,16 @@ let test_poly_distribution_result_reports_unformatted_monome () =
       check bool "unformatted distribution monome rejected" true true
   | Ok _ -> check bool "unformatted distribution monome expected" true false
 
+let test_poly_lift_half_coefficient_returns_input () =
+  (* With a 1/2 phase coefficient, the correction for lifting x0 xor x1 is an
+     integer phase. It vanishes modulo one, so no x0.x1 term is needed. *)
+  let input =
+    Monome.Qubit (Qubit.Var 0)
+    +++ (Monome.Qubit (Qubit.Var 1) +++ Poly.empty)
+  in
+  let output = Poly.lift input div2 in
+  check bool "half-coefficient lift" true (Poly.equal input output)
+
 let poly_algebra =
   [
     ( "distribution_result returns poly",
@@ -1594,6 +1684,9 @@ let poly_algebra =
     ( "distribution_result reports unformatted monome",
       `Quick,
       test_poly_distribution_result_reports_unformatted_monome );
+    ( "lift with half coefficient adds no cross term",
+      `Quick,
+      test_poly_lift_half_coefficient_returns_input );
   ]
 
 let test_path_sum_equal_result_returns_true () =
@@ -1745,6 +1838,28 @@ let test_path_sum_equal_result_uses_ket_path_var_mapping_in_phase () =
   | Ok false -> Alcotest.fail "consistent path-variable renaming rejected"
   | Error _ -> Alcotest.fail "well-formed path-sum comparison expected"
 
+let test_path_sum_equal_result_rejects_phase_incompatible_with_ket_mapping () =
+  (* The kets map the first path variable y0 to y1. The second phase still
+     depends on its own y0, so the phases differ without either map being
+     malformed. *)
+  let phase =
+    Monome.Prod
+      ( Monome.Scal div2,
+        Monome.Prod
+          (Monome.Qubit (Qubit.Var 0), Monome.Qubit (Qubit.Var 1)) )
+    +++ Poly.empty
+  in
+  let path_sum1 : Path_sum.t =
+    { phase; ket = [| Qubit.Var 1 |]; path_var = [ 1 ] }
+  in
+  let path_sum2 : Path_sum.t =
+    { phase; ket = [| Qubit.Var 2 |]; path_var = [ 1; 2 ] }
+  in
+  match Path_sum.equal_result path_sum1 path_sum2 with
+  | Ok false -> ()
+  | Ok true -> Alcotest.fail "phases incompatible with ket mapping accepted"
+  | Error _ -> Alcotest.fail "well-formed unequal path sums reported malformed"
+
 let path_sum_equality =
   [
     ( "equal_result returns true",
@@ -1771,6 +1886,9 @@ let path_sum_equality =
     ( "equal_result applies ket path-variable mapping to phase",
       `Quick,
       test_path_sum_equal_result_uses_ket_path_var_mapping_in_phase );
+    ( "equal_result rejects phase incompatible with ket mapping",
+      `Quick,
+      test_path_sum_equal_result_rejects_phase_incompatible_with_ket_mapping );
   ]
 
 let test_path_sum_ofSize_init_result_returns_path_sum () =
@@ -2651,6 +2769,29 @@ let test_replace_not_path_var_by_var_ignores_non_simplifying_shift () =
   check string "non-simplifying shift unchanged" (PSS.exact input)
     (PSS.exact output)
 
+let test_replace_not_path_var_by_var_tries_next_candidate () =
+  (* Input: phase = 0, ket = |x0 + y0, x1 + y1, y0>
+
+     The first candidate y0 <- x0 + y0 only moves the direct occurrence of y0,
+     so it must be ignored. The second candidate y1 <- x1 + y1 creates a new
+     output equal to y1 and must be applied. *)
+  let input : Path_sum.t =
+    {
+      phase = Poly.zero;
+      ket = [| v 0 ++ v 3; v 1 ++ v 4; v 3 |];
+      path_var = [ 3; 4 ];
+    }
+  in
+  let expected : Path_sum.t =
+    {
+      phase = Poly.zero;
+      ket = [| v 0 ++ v 3; v 4; v 3 |];
+      path_var = [ 3; 4 ];
+    }
+  in
+  let output = Rules.Variable_replacement.replace_not_path_var_by_var input in
+  check string "next affine candidate" (PSS.exact expected) (PSS.exact output)
+
 let test_replace_not_path_var_by_var_ignores_nonlinear_shift () =
   (* Input:            phase = 0, ket = |x0x1 + y0, x1>
      Candidate change: y0 <- y0 + x0x1
@@ -2719,6 +2860,9 @@ let variable_replacement =
     ( "replace_not_path_var_by_var ignores non-simplifying shift",
       `Quick,
       test_replace_not_path_var_by_var_ignores_non_simplifying_shift );
+    ( "replace_not_path_var_by_var tries the next affine candidate",
+      `Quick,
+      test_replace_not_path_var_by_var_tries_next_candidate );
     ( "replace_not_path_var_by_var ignores nonlinear shift",
       `Quick,
       test_replace_not_path_var_by_var_ignores_nonlinear_shift );

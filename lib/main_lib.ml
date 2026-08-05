@@ -404,8 +404,31 @@ let run () =
     let p = Program.format (to_prog input_file) in
     if debug then printf "Main.qasm_to_owm, p =\n%s\n\n" (ProgS.pretty p);
 
-    let by_meas, inputs, outputs = Owm.to_owm p ~dm in
-    printf "%s,%s" (ListBis.string_int inputs) (ListBis.string_int outputs);
+    (* In deferred-measurement mode, keep the input conversion in memory
+       instead of using an intermediate OpenQASM file as a transport format. *)
+    let owm_input =
+      if dm then
+        let unitary, _, _ =
+          To_deferred_measurement.to_deferred_measurements p
+        in
+        unitary
+      else p
+    in
+    let by_meas, inputs, outputs = Owm.to_owm owm_input in
+    let by_meas, measurements =
+      if dm then
+        let unitary_by_meas, _, measurements =
+          To_deferred_measurement.to_deferred_measurements by_meas
+        in
+        (unitary_by_meas, measurements)
+      else (by_meas, [])
+    in
+    if dm then
+      printf "%s,%s,%s" (ListBis.string_int inputs)
+        (ListBis.string_int outputs)
+        (ListBis.string_int measurements)
+    else
+      printf "%s,%s" (ListBis.string_int inputs) (ListBis.string_int outputs);
 
     let by_meas = Program.format by_meas in
 

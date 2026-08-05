@@ -289,6 +289,14 @@ run_transform() {
 	run_sqbricks_command "-qasm_to_${kind}" "$input" "$output" "false"
 }
 
+# Build the final unitary OWM circuit without intermediate QASM files.
+run_owm_ium_transform() {
+	local input="$1"
+	local output="$2"
+
+	run_sqbricks_command -qasm_to_owm "$input" "$output" "true"
+}
+
 # Split a transformation result of the form "inputs,outputs".
 split_transform_output() {
 	local value="$1"
@@ -524,13 +532,12 @@ test_owm_vs_tele() {
 # then compare their lifted IUM forms.
 test_owm_vs_qiskit() {
 	local path_original="$1"
-	local path_original_unitary="$2"
-	local path_optimized="$3"
-	local path_optimized_ium="$4"
-	local path_owm="$5"
-	local path_owm_ium="$6"
-	local name="$7"
+	local path_optimized="$2"
+	local path_optimized_ium="$3"
+	local path_owm_ium="$4"
+	local name="$5"
 	local output_owm
+	local remaining_metadata
 	local inputs1
 	local outputs1
 	local meas1
@@ -540,11 +547,7 @@ test_owm_vs_qiskit() {
 		emit_conversion_error "$name" "lifting"
 		return
 	fi
-	if ! run_sql u "$path_original" "$path_original_unitary"; then
-		emit_conversion_error "$name" "lifting"
-		return
-	fi
-	if ! run_transform owm "$path_original_unitary" "$path_owm"; then
+	if ! run_owm_ium_transform "$path_original" "$path_owm_ium"; then
 		emit_conversion_error "$name" "lifting"
 		return
 	fi
@@ -553,13 +556,12 @@ test_owm_vs_qiskit() {
 		emit_conversion_error "$name" "lifting"
 		return
 	fi
-	if ! run_sql u "$path_owm" "$path_owm_ium"; then
-		emit_conversion_error "$name" "lifting"
-		return
-	fi
 
-	meas1="$(trim "$cmd_stdout")"
-	split_transform_output "$output_owm" inputs1 outputs1
+	# The direct OWM command returns "inputs,outputs,measurements".
+	inputs1="$(trim "${output_owm%%,*}")"
+	remaining_metadata="${output_owm#*,}"
+	outputs1="$(trim "${remaining_metadata%%,*}")"
+	meas1="$(trim "${remaining_metadata#*,}")"
 	nb_gate="$(gate_count "$path_owm_ium" "$path_optimized_ium")"
 	run_equiv_sqbricks "$nb_gate" "$name" \
 		"$path_owm_ium" "$path_optimized_ium" "lifting" \
@@ -601,10 +603,8 @@ prepare_paths() {
 		path_tele_ium="$tmp_dir/${filename_no_ext}_${version}_tele_ium.qasm"
 		;;
 	owm-vs-qiskit)
-		path_original_unitary="$tmp_dir/${filename_no_ext}_original_unitary.qasm"
 		path_optimized="$tmp_dir/${filename_no_ext}_optimize.qasm"
 		path_optimized_ium="$tmp_dir/${filename_no_ext}_optimize_ium.qasm"
-		path_owm="$tmp_dir/${filename_no_ext}_${version}_owm.qasm"
 		path_owm_ium="$tmp_dir/${filename_no_ext}_${version}_owm_ium.qasm"
 		;;
 	esac
@@ -763,8 +763,8 @@ for path_original in "${path_originals[@]}"; do
 				"$path_owm" "$path_owm_ium" "$path_tele" "$path_tele_ium" "$name"
 			;;
 		owm-vs-qiskit)
-			test_owm_vs_qiskit "$path_original" "$path_original_unitary" \
-				"$path_optimized" "$path_optimized_ium" "$path_owm" "$path_owm_ium" "$name"
+			test_owm_vs_qiskit "$path_original" "$path_optimized" \
+				"$path_optimized_ium" "$path_owm_ium" "$name"
 			;;
 		esac
 	fi

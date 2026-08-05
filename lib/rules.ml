@@ -772,6 +772,29 @@ module HH = struct
     let condition_poly = lazy (not (y0_member_unauthorized y0 ps.phase)) in
     if condition_ket then Lazy.force condition_poly else false
 
+  let path_variables_with_possible_yi (phase : Poly.t) width =
+    let rec aux phase candidates =
+      if Poly.equal phase Poly.empty then List.sort_uniq Int.compare candidates
+      else
+        let monome, remaining_phase = (Poly.find phase, Poly.del phase) in
+        let candidates =
+          match monome with
+          | Prod (Scal coefficient, Prod (Qubit (Var v1), Qubit (Var v2)))
+            when Q.equal coefficient div2 ->
+              (* This is only a prefilter for [hh_aux]: every path variable can
+                 be tried as y0, but a successful match also needs a path
+                 variable yi. For example, [1/2*y0*y1] provides a possible yi
+                 for both variables, whereas [1/2*x0*y0] provides none for y0. *)
+              let candidates =
+                if width <= v2 then v1 :: candidates else candidates
+              in
+              if width <= v1 then v2 :: candidates else candidates
+          | _ -> candidates
+        in
+        aux remaining_phase candidates
+    in
+    aux phase []
+
   (* HH removes the summation variable y0 and the constrained variable yi in
      one canonical-to-canonical transformation. *)
   let remove_matched_path_variables path_variables y0 yi =
@@ -801,16 +824,11 @@ module HH = struct
             | Some r ->
                 if debug then
                   printf "Rule_hh.hh_aux, r = %s\n%!" (PS.pretty r n);
-                let r_simplified = simplify r in
-                if debug then
-                  printf "Rule_hh.hh_aux, r_simplified = %s\n%!"
-                    (PS.pretty r_simplified n);
                 (* \( 1/2 y_0 (y_i + Q) -> (Q = q1 ++ q2) -> Q = q1 + q2 \) *)
                 let ps_output_simplified : Path_sum.t =
                   {
                     phase =
-                      simplify
-                        (Poly.substitute_rules_hh r_simplified yi q ~debug);
+                      simplify (Poly.substitute_rules_hh r yi q ~debug);
                     ket =
                       Path_sum.Ket.substitute ps.ket yi
                         (qsimplify (Poly.to_qubit q));
@@ -837,11 +855,11 @@ module HH = struct
     let width = Array.length ps.ket in
     if Int.equal y0_to_remove (-1) then
       (* Try y0 in order of arrival *)
-      let rec aux (acc : Path_sum.t) = function
+      let rec aux (acc : Path_sum.t) candidates = function
         | y0 :: y0_remain ->
             if debug then
               printf "Rule_hh.hh.accepted, y0 candidate = %d\n\n%!" (y0 - width);
-            if y0_accepted y0 acc then (
+            if List.mem y0 candidates && y0_accepted y0 acc then (
               if debug then
                 printf "Rule_hh.hh.accepted, y0 = %d\n\n%!" (y0 - width);
               match hh_aux y0 acc ~debug with
@@ -853,15 +871,26 @@ module HH = struct
                    if debug then
                      printf
                        "Rule_hh.hh.accepted.match hh_aux, acc_reduced =\n\
-                        %s\n\n\
+                       %s\n\n\
                         %!"
                        (PSS.pretty acc_reduced);
-                   aux (Simplification.simplify acc_reduced) y0_remain)
-              | Ok None -> aux acc y0_remain)
-            else aux acc y0_remain
+                   (* [hh_aux] already simplifies its phase and ket. For
+                      example, [1/2*y0*y1 + 1/2*y2*y3] becomes the already
+                      simplified [1/2*y2*y3], so do not simplify it again. *)
+                   aux acc_reduced
+                     (path_variables_with_possible_yi acc_reduced.phase width)
+                     y0_remain)
+              | Ok None -> aux acc candidates y0_remain)
+            else aux acc candidates y0_remain
         | _ -> Ok acc
       in
-      aux ps ps.path_var
+      (* Keep malformed zero-width inputs on the existing error path through
+         [hh_aux]; candidate filtering is only valid for positive widths. *)
+      let candidates =
+        if width <= 0 then ps.path_var
+        else path_variables_with_possible_yi ps.phase width
+      in
+      aux ps candidates ps.path_var
     else if
       (* The user proposes y0 *)
       y0_accepted y0_to_remove ps
@@ -1330,23 +1359,6 @@ module Variable_replacement = struct
         0 ket
     in
 
-    let apply_change path_var shifted_path_var shifted_path_var_poly =
-      let output_state : Path_sum.t =
-        {
-          (* This helper lifts the Boolean XOR separately for each phase
-             monomial, preserving coefficients such as 1/4. *)
-          phase =
-            Poly.substitute_rules_hh ~debug input_state.phase path_var
-              shifted_path_var_poly;
-          ket =
-            Path_sum.Ket.substitute ~debug input_state.ket path_var
-              shifted_path_var;
-          path_var = input_state.path_var;
-        }
-      in
-      Simplification.simplify ~debug output_state
-    in
-
     let rec try_qubits qubit_index =
       if qubit_index = width then input_state
       else
@@ -1355,20 +1367,48 @@ module Variable_replacement = struct
         in
         match affine_xor_expression shifted_path_var with
         | Some ([ path_var ], true, shifted_path_var_poly) ->
-            let output_state =
-              apply_change path_var shifted_path_var shifted_path_var_poly
-            in
             let direct_before =
               count_direct_path_var input_state.ket path_var
             in
-            let direct_after = count_direct_path_var output_state.ket path_var in
+            let candidate_ket =
+              Path_sum.Ket.substitute ~debug input_state.ket path_var
+                shifted_path_var
+            in
+            let direct_after = count_direct_path_var candidate_ket path_var in
             if debug then
               printf
                 "Rules.replace_not_path_var_by_var, path_var = %d, \
                  direct_before = %d, direct_after = %d\n\n%!"
                 path_var direct_before direct_after;
-            if direct_before < direct_after then output_state
-            else try_qubits (qubit_index + 1)
+            if direct_before >= direct_after then try_qubits (qubit_index + 1)
+            else
+              let substituted_phase =
+                match shifted_path_var with
+                | Qubit.SumMod2 (Qubit.One, Qubit.Var variable)
+                  when Int.equal variable path_var ->
+                    (* Boolean negation lifts directly to 1 - y. Avoid the
+                       general affine-XOR lifting for this frequent case. *)
+                    let one_minus_path_var =
+                      Poly.merge Poly.one
+                        (Poly.to_poly
+                           (Monome.Prod
+                              ( Monome.Scal Q.minus_one,
+                                Monome.Qubit (Qubit.Var path_var) )))
+                    in
+                    Poly.substitute_poly ~debug input_state.phase path_var
+                      one_minus_path_var
+                | _ ->
+                    Poly.substitute_rules_hh ~debug input_state.phase path_var
+                      shifted_path_var_poly
+              in
+              let output_state : Path_sum.t =
+                {
+                  phase = substituted_phase;
+                  ket = candidate_ket;
+                  path_var = input_state.path_var;
+                }
+              in
+              Simplification.simplify ~debug output_state
         | _ -> try_qubits (qubit_index + 1)
     in
     try_qubits 0
