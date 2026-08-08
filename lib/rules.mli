@@ -134,6 +134,9 @@ module Rename : sig
       Example: [_string_update_pvs [(5, 2); (7, 3); (9, 4)]] returns
       ["(5,2);(7,3);(9,4)"] *)
 
+  (**/**)
+  (** Internal functions - unstable API, may change without notice. *)
+
   val _find_update_path_var : Path_sum.t -> (int * int) list
   (** Computes substitution pairs for {!rename}.
 
@@ -159,6 +162,7 @@ module Rename : sig
 
       This is the core substitution engine used by {!rename}. *)
 
+  (**/**)
   (* 
   val normalise_path_var : ?debug:bool -> Path_sum.t -> Path_sum.t
   (** [normalise_path_var ?debug ps] fully normalizes path variables to
