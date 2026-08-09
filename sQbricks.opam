@@ -11,7 +11,7 @@ It combines:
 The tool automatically checks circuit equivalence using formal methods."""
 maintainer: ["Jerome Ricciardi"]
 authors: ["Jerome Ricciardi"]
-license: "LICENSE"
+license: "LGPL-2.1-only"
 tags: [
   "topics"
   "quantum computing"
@@ -26,6 +26,14 @@ bug-reports: "https://github.com/jricc/SQbricks/issues"
 depends: [
   "ocaml"
   "dune" {>= "3.17"}
+  "zarith"
+  "landmarks"
+  "benchmark"
+  "lwt"
+  "batteries"
+  "logs"
+  "menhir" {>= "20180523"}
+  "alcotest" {with-test}
   "odoc" {with-doc}
 ]
 build: [

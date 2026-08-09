@@ -15,7 +15,7 @@
 
 (maintainers "Jerome Ricciardi")
 
-(license LICENSE)
+(license LGPL-2.1-only)
 
 (documentation https://github.com/jricc/SQbricks/tree/main/doc)
 
@@ -24,7 +24,17 @@
  (synopsis "Automatic equivalence checker for hybrid quantum circuits")
  (description
   "SQbricks is a tool for verifying the equivalence of hybrid quantum circuits.\nIt combines:\n- SQL: Implementation of our lifting method enabling hybrid circuit verification\n- SQV: A unitary verification tool for quantum circuits\n\nThe tool automatically checks circuit equivalence using formal methods.")
- (depends ocaml dune)
+ (depends
+  ocaml
+  dune
+  zarith
+  landmarks
+  benchmark
+  lwt
+  batteries
+  logs
+  menhir
+  (alcotest :with-test))
  (tags
   (topics
    "quantum computing"

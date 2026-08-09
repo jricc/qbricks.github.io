@@ -1,6 +1,21 @@
 # TODO
 
-## Next: phase 4 correctness bugs
+## Next: release 0.1.0
+
+- [x] Declare the direct OCaml dependencies and test dependencies in the opam
+  package metadata.
+- [x] Make CI install dependencies from the package metadata.
+- [x] Correct obsolete repository paths in `README.md` and add `CHANGELOG.md`.
+- [x] Present 0.1.0 as a research prototype without a global performance-gain
+  claim while the post-HH large benchmark remains inconclusive.
+- [ ] Run the final unit tests and light-regression check on the release
+  commit; both must pass.
+- [ ] Run the selected large-regression check and review all functional
+  statuses. Treat resource-bound timing variation as documented experimental
+  uncertainty, not as evidence of a global performance gain.
+- [ ] Create and push the `0.1.0` tag after the final checks and CI pass.
+
+## Completed phase 4 correctness bugs
 
 - [x] Make `Path_sum_library` gate constructors return a ket with the declared
   circuit width for arbitrary valid wires, and reject overlapping controls and
@@ -12,7 +27,7 @@
 - [x] Implement the consistent path-variable renaming documented for
   `Ket.equal_result` and used by `Path_sum.equal_result`.
 
-## Then: phase 4 API and robustness bugs
+## Completed phase 4 API and robustness bugs
 
 - [x] Fix OpenQASM export with `one_creg=true` so it keeps the quantum register
   and circuit, and reject unsupported controlled gates without recursive

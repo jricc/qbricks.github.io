@@ -19,7 +19,7 @@ Avoid large feature additions before the benchmark and regression setup are reli
 
 ## Current checkpoint
 
-As of 2026-07-21:
+As of 2026-08-08:
 
 - the light non-regression benchmark exists and checks both functional status
   and tracked performance;
@@ -34,6 +34,13 @@ As of 2026-07-21:
 - phase 3 covered reduction, equivalence checking, separation, projection,
   benchmark scripts, AST/Program invariants, OpenQASM parser behavior,
   deferred measurement translation, and path-sum generation.
+- the 2026-08-05 `main` checkpoint passed all unit-test suites and the light
+  non-regression check;
+- the large regression workflow is operational, but its latest post-HH run
+  remains inconclusive for a global performance comparison because some
+  Sequence cases are close to the memory and timeout limits;
+- version 0.1.0 is therefore presented as a research prototype without a
+  global performance-improvement claim;
 - phase 9 has a first prototype script for inspecting two QASM files, collecting
   SQV traces, path-sums, final path-sums, and prototype LaTeX/PDF path-sum
   exports.
