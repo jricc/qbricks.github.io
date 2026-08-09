@@ -257,6 +257,97 @@ let test_hh_simplifies_remainder_after_substitution () =
   check string "remainder simplified after substitution" (PSS.exact expected)
     (PSS.exact output)
 
+let test_hh_preserves_yi_candidate_order () =
+  (* phase = 1/2 y0y1 + 1/2 y0y2, ket = |y1>.
+     The canonical phase order selects y1, so Q = y2 and the ket becomes |y2>. *)
+  let phase =
+    Prod (Scal div2, Prod (Qubit (v 1), Qubit (v 2)))
+    +++ (Prod (Scal div2, Prod (Qubit (v 1), Qubit (v 3))) +++ Poly.empty)
+  in
+  let input : Path_sum.t =
+    { phase; ket = [| v 2 |]; path_var = [ 1; 2; 3 ] }
+  in
+  let expected : Path_sum.t =
+    { phase = p0; ket = [| v 3 |]; path_var = [ 3 ] }
+  in
+  let output =
+    match Rules.HH.hh ~y0_to_remove:1 input with
+    | Ok output -> output
+    | Error (Rules.MalformedPathSum message) ->
+        Alcotest.fail ("unexpected malformed path sum: " ^ message)
+  in
+  check string "first yi follows canonical phase order" (PSS.exact expected)
+    (PSS.exact output)
+
+let test_hh_rejects_repeated_y0_yi_pair () =
+  (* Two occurrences of 1/2 y0y1 do not satisfy the unique-pair condition. *)
+  let pair : Monome.t =
+    Prod (Scal div2, Prod (Qubit (v 1), Qubit (v 2)))
+  in
+  let input : Path_sum.t =
+    {
+      phase = pair +++ (pair +++ Poly.empty);
+      ket = [| v 2 |];
+      path_var = [ 1; 2 ];
+    }
+  in
+  let output =
+    match Rules.HH.hh ~y0_to_remove:1 input with
+    | Ok output -> output
+    | Error (Rules.MalformedPathSum message) ->
+        Alcotest.fail ("unexpected malformed path sum: " ^ message)
+  in
+  check string "repeated y0-yi pair is rejected" (PSS.exact input)
+    (PSS.exact output)
+
+let test_hh_rejects_y0_with_unauthorized_coefficient () =
+  (* The 1/4 y0x0 term prevents y0 from matching the HH rule. *)
+  let phase =
+    Prod (Scal div2, Prod (Qubit (v 1), Qubit (v 2)))
+    +++ (Prod (Scal div4, Prod (Qubit (v 1), Qubit x0)) +++ Poly.empty)
+  in
+  let input : Path_sum.t =
+    { phase; ket = [| v 2 |]; path_var = [ 1; 2 ] }
+  in
+  let output =
+    match Rules.HH.hh ~y0_to_remove:1 input with
+    | Ok output -> output
+    | Error (Rules.MalformedPathSum message) ->
+        Alcotest.fail ("unexpected malformed path sum: " ^ message)
+  in
+  check string "unauthorized y0 coefficient is rejected" (PSS.exact input)
+    (PSS.exact output)
+
+let test_hh_preserves_remainder_without_yi () =
+  (* phase = 1/2 y0(yi + x0) + 1/4 yi + 1/8 x1.
+     Only 1/4 yi is substituted; the independent 1/8 x1 term is preserved. *)
+  let phase =
+    Prod (Scal div2, Prod (Qubit (v 2), Qubit (v 3)))
+    +++ (Prod (Scal div2, Prod (Qubit (v 2), Qubit x0))
+         +++ (Prod (Scal div4, Qubit (v 3))
+              +++ (Prod (Scal div8, Qubit x1) +++ Poly.empty)))
+  in
+  let input : Path_sum.t =
+    { phase; ket = [| v 3; x1 |]; path_var = [ 2; 3 ] }
+  in
+  let expected : Path_sum.t =
+    {
+      phase =
+        Prod (Scal div4, Qubit x0)
+        +++ (Prod (Scal div8, Qubit x1) +++ Poly.empty);
+      ket = [| x0; x1 |];
+      path_var = [];
+    }
+  in
+  let output =
+    match Rules.HH.hh ~y0_to_remove:2 input with
+    | Ok output -> output
+    | Error (Rules.MalformedPathSum message) ->
+        Alcotest.fail ("unexpected malformed path sum: " ^ message)
+  in
+  check string "remainder without yi is preserved" (PSS.exact expected)
+    (PSS.exact output)
+
 let test_reduction_algorithm_reports_malformed_path_sum () =
   let malformed =
     match
@@ -290,6 +381,18 @@ let hh =
     ( "hh simplifies its remainder after substitution",
       `Quick,
       test_hh_simplifies_remainder_after_substitution );
+    ( "hh preserves yi candidate order",
+      `Quick,
+      test_hh_preserves_yi_candidate_order );
+    ( "hh rejects a repeated y0-yi pair",
+      `Quick,
+      test_hh_rejects_repeated_y0_yi_pair );
+    ( "hh rejects y0 with an unauthorized coefficient",
+      `Quick,
+      test_hh_rejects_y0_with_unauthorized_coefficient );
+    ( "hh preserves the remainder without yi",
+      `Quick,
+      test_hh_preserves_remainder_without_yi );
     ( "reduction_algorithm reports malformed path sum",
       `Quick,
       test_reduction_algorithm_reports_malformed_path_sum );
