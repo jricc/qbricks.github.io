@@ -166,6 +166,13 @@ Expected output:
 
 Goal: integrate Amy's omega rule into SQbricks.
 
+Status as of 2026-08-11: the generic ANF matcher, targeted tests, malformed
+metadata handling, and integration at the end of the reduction pipeline are
+implemented on `omega-rule`. Functional validation has not found a status
+regression. The performance comparison must be repeated after merging the
+current `main`; the latest large run was interrupted before all families
+completed.
+
 Process:
 
 1. write targeted tests;

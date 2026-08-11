@@ -30,6 +30,7 @@
       states in the symbolic execution tool, using techniques from the paper
       including:
     - [Elim]
+    - [Omega]
     - [HH]
     - [Variable_replacement]
 
@@ -57,12 +58,20 @@ module Elim : sig
 end
 
 module Omega : sig
-  (** This module incrementally implements Amy's omega reduction rule. The
-      current cases are [Q = 0], [Q = xi], [Q = yj] for another path variable,
-      [Q = xi xj] and [Q = xi xor xj] for distinct input variables,
-      [Q = xi yj] and [Q = xi xor yj] for mixed pairs, and [Q = yj yk] and
-      [Q = yj xor yk] for distinct path variables. Every implemented case
-      supports any [R] independent of the eliminated variable. *)
+  (** This module implements Amy's omega reduction rule for an arbitrary
+      Boolean polynomial [Q] in algebraic normal form (ANF). ANF writes [Q] as
+      an xor of Boolean monomials; for example, [Q = x0 xor (x1 y1)]. If [y0]
+      is absent from the ket and [Q] and [R] are independent of [y0], the rule
+      transforms
+
+      {[
+        1/4 y0 + 1/2 y0 Q_hat + R
+          -> 1/8 - 1/4 Q_hat + R
+      ]}
+
+      where [Q_hat] is the arithmetic lift of [Q]. Each ANF monomial must be
+      represented by a separate phase term; an xor nested inside one monomial
+      is rejected conservatively. *)
 
   val omega :
     ?debug:bool ->
@@ -70,8 +79,13 @@ module Omega : sig
     (Path_sum.t option, reduction_error) result
   (** [omega ?debug ps] applies at most one omega reduction. It returns
       [Ok (Some ps')] when a path variable is eliminated, [Ok None] when the
-      rule does not match, and [Error (MalformedPathSum message)] when [ps]
-      violates an invariant required by the rule. *)
+      rule does not match, and [Error (MalformedPathSum message)] when a
+      zero-width ket declares a path variable or when a path-variable index is
+      below the ket width. The phase is normalized on a local copy before
+      matching.
+
+      For example, a phase [1/4 y0] with [y0] absent from the ket becomes the
+      constant phase [1/8], and [y0] is removed from the path variables. *)
 end
 
 module HH : sig

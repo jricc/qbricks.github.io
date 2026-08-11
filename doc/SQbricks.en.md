@@ -248,6 +248,25 @@ execution; the original `Program.t` is not rewritten.
 rule that does not apply to a valid path sum is distinguished from a malformed
 path sum; the latter reaches `Equiv` as `ErrorMalformedPathSum`.
 
+The sequence first stabilizes simplification, the HH rule, variable change,
+and factorization. It then tries the Omega rule last. If Omega removes a path
+variable, the complete sequence starts again; otherwise the final path sum is
+renamed to use contiguous indices.
+
+Amy's Omega rule removes a path variable `y0` that is absent from the ket when
+the phase has the following form:
+
+```text
+1/4 y0 + 1/2 y0 Q_hat + R  ->  1/8 - 1/4 Q_hat + R
+```
+
+`Q_hat` is the arithmetic lift of a Boolean polynomial `Q` written in
+algebraic normal form, that is, as an XOR of monomials. Both `Q` and the phase
+context `R` must be independent of `y0`. One application preserves the ket and
+`R`, removes `y0` from the path-variable list, and restarts the other
+reductions. The matcher expects the ANF XOR to be distributed across distinct
+phase terms; it does not expand a `SumMod2` nested inside one monomial.
+
 Qubit, monomial, polynomial, ket, and path-sum comparisons use `*_result`
 functions when metadata inconsistency must be distinguished from genuine
 inequality.

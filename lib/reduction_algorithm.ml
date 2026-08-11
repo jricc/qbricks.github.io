@@ -42,21 +42,7 @@ let reduction_algorithm ?(debug = false) input =
 
   let rec aux acc =
     if debug then printf "Reduction_algorithm, acc =\n%s\n\n" (PSS.pretty acc);
-
-    (* This first integration deliberately gives Omega priority so the
-       existing regression suite exercises every currently supported case.
-       A non-canonical Omega phase may be missed on this pass because
-       Simplification has not run yet.
-       Revisit this order after the Omega matcher has been generalized and
-       validated case by case. *)
-    match Rules.Omega.omega ~debug acc with
-    | Error reduction_error -> Error reduction_error
-    | Ok (Some state_omega) ->
-        if debug then
-          printf "Reduction_algorithm, state_omega =\n%s\n\n"
-            (PSS.pretty state_omega);
-        aux state_omega
-    | Ok None -> apply_existing_reductions acc
+    apply_existing_reductions acc
 
   and apply_existing_reductions acc =
     let state_simpl = Rules.Simplification.simplify acc in
@@ -107,7 +93,19 @@ let reduction_algorithm ?(debug = false) input =
               printf "Reduction_algorithm, state_repl =\n%s\n\n"
                 (PSS.pretty state_repl);
             if _condition_to_continue acc state_repl then aux state_repl
-            else Ok state_repl
+            else
+              (* Case: existing reductions are stable; try Omega last. *)
+              match Rules.Omega.omega ~debug state_repl with
+              | Error reduction_error -> Error reduction_error
+              | Ok (Some state_omega) ->
+                  (* Case: Omega removed one variable; restart the pipeline. *)
+                  if debug then
+                    printf "Reduction_algorithm, state_omega =\n%s\n\n"
+                      (PSS.pretty state_omega);
+                  aux state_omega
+              | Ok None ->
+                  (* Case: no reduction rule applies; this is the fixed point. *)
+                  Ok state_repl
   in
   match aux input with
   | Ok output -> Ok (Rename.rename output)

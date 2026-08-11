@@ -98,6 +98,9 @@ If a more generic design is possible, mention it only as an alternative, but do 
   two similar data structures must be handled differently.
 - As soon as code or tests are even slightly non-trivial, add a short comment
   explaining the intention, invariant, or reason for the case.
+- Before each function, add a concise comment explaining why it exists and
+  give a small concrete example. Apply this rule to local and internal helper
+  functions as well.
 - In branch-heavy domain logic, comment each non-obvious branch with the
   semantic case it handles.
 - Keep branch comments short: name the case and, when useful, its result or the

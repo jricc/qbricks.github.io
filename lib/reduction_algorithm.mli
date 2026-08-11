@@ -19,62 +19,29 @@
 (*                                                                        *)
 (**************************************************************************)
 
-(** Module for reducing quantum circuit path sums to normal form.
-
-    This module implements a complete reduction algorithm for path sums
-    representing quantum states, applying a sequence of reduction rules to
-    simplify the representation. *)
+(** Module for simplifying quantum-circuit path sums with the SQbricks
+    reduction pipeline. *)
 
 module PSS = Path_sum.String
 
 val reduction_algorithm :
   ?debug:bool -> Path_sum.t -> (Path_sum.t, Rules.reduction_error) result
-(** [reduction_algorithm ?debug ps] applies the complete reduction
-    sequence and returns an explicit error when a reduction rule receives a
-    malformed path sum. The reduction process follows these steps: 1.
-    Simplification: Algebraic simplification of expressions 2. HH rule:
-    Elimination of certain path variables 3. Variable replacement:
-    Simplification of XOR expressions 4. Factorization: Reduction of phase terms
-    5. Constant conversion: Standardization of ket expressions 6. Normalization:
-    Path variable indexing
+(** [reduction_algorithm ?debug ps] applies the configured reduction
+    sequence and returns an explicit error when a rule receives a malformed
+    path sum. The sequence is:
 
-    Example transformation: Initial state:
-    - Phase: 1/2*y2 + 1/2*y2 + 1/2*y2*y3 + 1/2*y3*y1 + 1/2*y4*y5 + 1/2*y4*x2
-    - Ket: |x0 + x0 + x1, y2 + y1, y5, y8+y10, 1+y0>
+    - simplify the ket and phase;
+    - apply HH and direct variable replacement;
+    - apply variable-replacement factorization and affine ket conversion;
+    - restart while these transformations make progress;
+    - once they reach a fixed point, try Omega;
+    - restart after an Omega match, or rename path variables after its final
+      non-match.
 
-    Step-by-step reduction: 1. Simplification:
-    - Phase: 1/2*y2 + 1/2*y2 → 0
-    - Ket: x0 + x0 + x1 → x1 Intermediate:
-    - Phase: 1/2*y2*y3 + 1/2*y3*y1 + 1/2*y4*y5 + 1/2*y4*x2
-    - Ket: |x1, y2 + y1, y5, y8+y10, 1+y0>
-
-    2. HH rule (with y0 = y4):
-    - Eliminates terms with y4 coefficient 1/2 Intermediate:
-    - Phase: 1/2*y2*y3 + 1/2*y3*y1
-    - Ket: |x1, y2 + y1, x2, y8+y10, 1+y0>
-
-    3. Variable replacement:
-    - Replaces y8+y10 with new variable y11 Intermediate:
-    - Phase: 1/2*y2*y3 + 1/2*y3*y1
-    - Ket: |x1, y2 + y1, x2, y11, 1+y0>
-
-    4. Factorization:
-    - Replaces y2 + y1 with new variable y12
-    - Substitutes y12 in phase: 1/2*y12*y3 Intermediate:
-    - Phase: 1/2*y12*y3
-    - Ket: |x1, y12, x2, y11, 1+y0>
-
-    5. Constant conversion:
-    - Converts 1+y0 to new variable y13 Intermediate:
-    - Phase: 1/2*y12*y3
-    - Ket: |x1, y12, x2, y11, y13>
-
-    6. Normalization: Final state:
-    - Phase: 1/2*y0*y3
-    - Ket: |x1, y0, x2, y1, y2>
-
-    Note: The algorithm preserves quantum state equivalence while reducing
-    complexity. *)
+    Omega is deliberately last because the cheaper existing reductions often
+    eliminate its candidates first. For example, if the stable phase is
+    [1/4 y0] and [y0] is absent from the ket, Omega replaces it with [1/8],
+    removes [y0], and restarts the sequence. *)
 
 (**/**)
 
