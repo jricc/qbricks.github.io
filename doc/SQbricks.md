@@ -311,5 +311,3 @@ parcourir les artefacts produits.
 - Comportements validés : tests Alcotest dans `test/`.
 - Runners et formats de benchmark : `scripts/benchmarks-light.sh`,
   `scripts/benchmarks-sqbricks.sh` et `scripts/check-regression-large.sh`.
-- Planification du projet : [`ROADMAP.md`](../ROADMAP.md) et
-  [`TODO.md`](../TODO.md).
