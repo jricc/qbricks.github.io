@@ -617,12 +617,136 @@ module Rename = struct
 end
 
 module Variable_replacement = struct
+  (* Temporary profiler enabled by [SQBRICKS_PROFILE_VARIABLE_REPLACEMENT_FILE]. *)
+  type profile_step = {
+    name : string;
+    mutable calls : int;
+    mutable seconds : float;
+  }
+
+  type profile = {
+    file : string;
+    call : int;
+    start_time : float;
+    input_simplification : profile_step;
+    candidate_extraction : profile_step;
+    candidate_filtering : profile_step;
+    ket_replacement : profile_step;
+    path_variable_update : profile_step;
+    rename : profile_step;
+    mutable qubits_seen : int;
+    mutable sum_qubits_seen : int;
+    mutable condition_calls : int;
+    mutable direct_candidates : int;
+    mutable matches : int;
+  }
+
+  let profile_call = ref 0
+
+  let make_profile_step name = { name; calls = 0; seconds = 0.0 }
+
+  let make_profile () =
+    match Sys.getenv_opt "SQBRICKS_PROFILE_VARIABLE_REPLACEMENT_FILE" with
+    | None -> None
+    | Some file ->
+        incr profile_call;
+        Some
+          {
+            file;
+            call = !profile_call;
+            start_time = Unix.gettimeofday ();
+            input_simplification = make_profile_step "input_simplification";
+            candidate_extraction = make_profile_step "candidate_extraction";
+            candidate_filtering = make_profile_step "candidate_filtering";
+            ket_replacement = make_profile_step "ket_replacement";
+            path_variable_update = make_profile_step "path_variable_update";
+            rename = make_profile_step "rename";
+            qubits_seen = 0;
+            sum_qubits_seen = 0;
+            condition_calls = 0;
+            direct_candidates = 0;
+            matches = 0;
+          }
+
+  let measure profile get_step operation =
+    match profile with
+    | None -> operation ()
+    | Some profile ->
+        let step = get_step profile in
+        step.calls <- step.calls + 1;
+        let start_time = Unix.gettimeofday () in
+        let result = operation () in
+        step.seconds <- step.seconds +. (Unix.gettimeofday () -. start_time);
+        result
+
+  let profile_size (state : Path_sum.t) =
+    ( List.length state.path_var,
+      Poly.size state.phase,
+      Path_sum.Ket.number_of_sum state.ket )
+
+  let write_profile profile status input simplified output =
+    match profile with
+    | None -> ()
+    | Some profile ->
+        let steps =
+          [ profile.input_simplification; profile.candidate_extraction;
+            profile.candidate_filtering; profile.ket_replacement;
+            profile.path_variable_update; profile.rename ]
+        in
+        let input_path_vars, input_phase_monomes, input_ket_sums =
+          profile_size input
+        in
+        let simplified_path_vars, simplified_phase_monomes, simplified_ket_sums =
+          profile_size simplified
+        in
+        let output_path_vars, output_phase_monomes, output_ket_sums =
+          match output with
+          | Some state -> profile_size state
+          | None -> (-1, -1, -1)
+        in
+        let total_seconds = Unix.gettimeofday () -. profile.start_time in
+        let measured_seconds =
+          List.fold_left
+            (fun total step -> total +. step.seconds)
+            0.0 steps
+        in
+        let channel =
+          open_out_gen [ Open_wronly; Open_creat; Open_append; Open_text ] 0o644
+            profile.file
+        in
+        fprintf channel
+          "VARIABLE_REPLACEMENT_PROFILE pid=%d call=%d status=%s total_s=%.6f \
+           unmeasured_s=%.6f qubits_seen=%d sum_qubits_seen=%d \
+           condition_calls=%d direct_candidates=%d matches=%d \
+           input_path_vars=%d input_phase_monomes=%d input_ket_sums=%d \
+           simplified_path_vars=%d simplified_phase_monomes=%d \
+           simplified_ket_sums=%d output_path_vars=%d \
+           output_phase_monomes=%d output_ket_sums=%d\n"
+          (Unix.getpid ()) profile.call status total_seconds
+          (total_seconds -. measured_seconds)
+          profile.qubits_seen profile.sum_qubits_seen profile.condition_calls
+          profile.direct_candidates profile.matches input_path_vars
+          input_phase_monomes input_ket_sums simplified_path_vars
+          simplified_phase_monomes simplified_ket_sums output_path_vars
+          output_phase_monomes output_ket_sums;
+        List.iter
+          (fun step ->
+            fprintf channel
+              "VARIABLE_REPLACEMENT_STEP pid=%d call=%d step=%s calls=%d \
+               seconds=%.6f\n"
+              (Unix.getpid ()) profile.call step.name step.calls step.seconds)
+          steps;
+        close_out channel
+
   (** [condition_to_substitute ?debug q except ps] returns [Some y] when [q]
       has the proved form [y xor Q], where [y] is a declared path variable that
       does not occur in [Q], the phase, or another output qubit. *)
 
-  let condition_to_substitute ?(debug = false) (q : Qubit.t) except
-      (ps : Path_sum.t) : (int option, reduction_error) result =
+  let condition_to_substitute ?(debug = false) ?(profile = None) (q : Qubit.t)
+      except (ps : Path_sum.t) : (int option, reduction_error) result =
+    (match profile with
+    | Some profile -> profile.condition_calls <- profile.condition_calls + 1
+    | None -> ());
     let width = Array.length ps.ket in
     let rec direct_xor_path_variables (qubit : Qubit.t) =
       match qubit with
@@ -643,7 +767,15 @@ module Variable_replacement = struct
           || occurs_under_product variable right_qubit
       | Qubit.Zero | Qubit.One | Var _ -> false
     in
-    let direct_path_variables = direct_xor_path_variables q in
+    let direct_path_variables =
+      measure profile (fun profile -> profile.candidate_extraction) (fun () ->
+          direct_xor_path_variables q)
+    in
+    (match profile with
+    | Some profile ->
+        profile.direct_candidates <-
+          profile.direct_candidates + List.length direct_path_variables
+    | None -> ());
     let occurs_once variable =
       Int.equal 1
         (List.fold_left
@@ -658,8 +790,9 @@ module Variable_replacement = struct
       && not (Poly.member variable ps.phase)
     in
     let available_path_variables =
-      List.sort_uniq Int.compare
-        (List.filter is_available direct_path_variables)
+      measure profile (fun profile -> profile.candidate_filtering) (fun () ->
+          List.sort_uniq Int.compare
+            (List.filter is_available direct_path_variables))
     in
     if debug then
       printf "Reduction_rules.condition_to_substitute, candidates = %s\n\n"
@@ -715,59 +848,89 @@ module Variable_replacement = struct
 
   let variable_replacement ?(debug = false) (input : Path_sum.t) :
       (Path_sum.t option, reduction_error) result =
+    let profile = make_profile () in
     let width = Array.length input.ket in
 
     if debug then
       printf "Reduction_rules.variable_replacement, input.phase = %s\n\n"
         (PS.pretty input.phase width);
 
-    let ps = Simplification.simplify input in
+    let ps =
+      measure profile (fun profile -> profile.input_simplification) (fun () ->
+          Simplification.simplify input)
+    in
 
     if debug then
       printf "Reduction_rules.variable_replacement, ps.phase = %s\n\n"
         (PS.pretty ps.phase width);
 
-    if List.exists (fun path_var -> path_var < width) ps.path_var then
-      Error
-        (MalformedPathSum
-           "Rules.Variable_replacement.variable_replacement: path variable index below ket width")
-    else if List.equal Int.equal ps.path_var [] then Ok None
-    else
-      let new_y = ListBis.max_int ps.path_var + 1 in
+    let result =
+      if List.exists (fun path_var -> path_var < width) ps.path_var then
+        Error
+          (MalformedPathSum
+             "Rules.Variable_replacement.variable_replacement: path variable index below ket width")
+      else if List.equal Int.equal ps.path_var [] then Ok None
+      else
+        let rec iterate_over_qubits indice =
+          if Int.equal indice width then Ok None
+          else (
+            (match profile with
+            | Some profile -> profile.qubits_seen <- profile.qubits_seen + 1
+            | None -> ());
+            let process_qubit (qubit_i : Qubit.t) =
+              match qubit_i with
+              | SumMod2 _ ->
+                  (match profile with
+                  | Some profile ->
+                      profile.sum_qubits_seen <- profile.sum_qubits_seen + 1
+                  | None -> ());
+                  (match
+                     condition_to_substitute ~debug ~profile qubit_i indice ps
+                   with
+                  | Error reduction_error -> Error reduction_error
+                  | Ok (Some v) ->
+                      (match profile with
+                      | Some profile -> profile.matches <- profile.matches + 1
+                      | None -> ());
+                      let substituted_ket =
+                        measure profile
+                          (fun profile -> profile.ket_replacement)
+                          (fun () ->
+                            (* [condition_to_substitute] proves that [v] occurs
+                               only in this qubit. The change of variable
+                               [v' = qubit_i] can therefore keep the name [v].
+                               Example: |x0 + y0, y1> becomes |y0, y1>. *)
+                            substitute_qubit_in_ket ps.ket (Var v) qubit_i)
+                      in
+                      Ok (Some (substituted_ket, v))
+                  | Ok None -> iterate_over_qubits (indice + 1))
+              | _ -> iterate_over_qubits (indice + 1)
+            in
+            process_qubit ps.ket.(indice))
+        in
 
-      let rec iterate_over_qubits indice =
-        if Int.equal indice width then Ok None
-        else
-          let process_qubit (qubit_i : Qubit.t) =
-            match qubit_i with
-            | SumMod2 _ -> (
-                match condition_to_substitute ~debug qubit_i indice ps with
-                | Error reduction_error -> Error reduction_error
-                | Ok (Some v) ->
-                    Ok
-                      (Some
-                         ( substitute_qubit_in_ket ps.ket (Var new_y) qubit_i,
-                           v ))
-                | Ok None -> iterate_over_qubits (indice + 1))
-            | _ -> iterate_over_qubits (indice + 1)
-          in
-          process_qubit ps.ket.(indice)
-      in
-
-      match iterate_over_qubits 0 with
-      | Error reduction_error -> Error reduction_error
-      | Ok (Some (k, v)) ->
-          let output : Path_sum.t =
-            {
-              phase = ps.phase;
-              ket = k;
-              path_var =
-                List.sort_uniq Int.compare
-                  (new_y :: ListBis.remove v ps.path_var);
-            }
-          in
-          Ok (Some (Rename.rename output))
-      | Ok None -> Ok None
+        match iterate_over_qubits 0 with
+        | Error reduction_error -> Error reduction_error
+        | Ok (Some (k, _)) ->
+            let output : Path_sum.t =
+              {
+                phase = ps.phase;
+                ket = k;
+                path_var = ps.path_var;
+              }
+            in
+            let renamed_output =
+              measure profile (fun profile -> profile.rename) (fun () ->
+                  Rename.rename output)
+            in
+            Ok (Some renamed_output)
+        | Ok None -> Ok None
+    in
+    (match result with
+    | Ok (Some output) -> write_profile profile "match" input ps (Some output)
+    | Ok None -> write_profile profile "none" input ps None
+    | Error _ -> write_profile profile "error" input ps None);
+    result
 
   (* Factorization by variable replacement.
    Example: phase = x0y0 + x0y1, ket = |y0 + y1>
