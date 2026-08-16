@@ -10,6 +10,8 @@ owm;hwb6;owm;-;EQ;yes;benchmarks/Feynman/hwb6.qasm
 tele;tof_3;tele;EQ;EQ;no;benchmarks/Feynman/tof_3.qasm
 tele;barenco_tof_3;tele;EQ;EQ;no;benchmarks/Feynman/barenco_tof_3.qasm
 tele;qft_4;tele;EQ;EQ;no;benchmarks/Feynman/qft_4.qasm
+tele;adder_n28;tele;EQ;EQ;yes;benchmarks/VeriQbench/combinational/adder/adder_n28.qasm
+tele;grover_17;tele;EQ;EQ;yes;benchmarks/VeriQbench/combinational/grover/grover_17.qasm
 tele;qft_58;tele;EQ;-;yes;benchmarks/VeriQbench/combinational/qft/qft_58.qasm
 tele;pe_55;tele;EQ;-;yes;benchmarks/VeriQbench/combinational/pe/pe_55.qasm
 tele;qft_98;tele;-;EQ;yes;benchmarks/VeriQbench/combinational/qft/qft_98.qasm
