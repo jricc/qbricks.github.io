@@ -257,15 +257,16 @@ Amy's Omega rule removes a path variable `y0` that is absent from the ket when
 the phase has the following form:
 
 ```text
-1/4 y0 + 1/2 y0 Q_hat + R  ->  1/8 - 1/4 Q_hat + R
+1/4 y0 + 1/2 y0 Q + R  ->  1/8 - 1/4 Q_hat + R
 ```
 
-`Q_hat` is the arithmetic lift of a Boolean polynomial `Q` written in
-algebraic normal form, that is, as an XOR of monomials. Both `Q` and the phase
-context `R` must be independent of `y0`. One application preserves the ket and
-`R`, removes `y0` from the path-variable list, and restarts the other
-reductions. The matcher expects the ANF XOR to be distributed across distinct
-phase terms; it does not expand a `SumMod2` nested inside one monomial.
+`Q` is a Boolean polynomial written in algebraic normal form, that is, as an
+XOR of monomials. At the input, each monomial `Mi` of `Q` is represented by a
+distinct `1/2 y0 Mi` phase term. `Q_hat` is the arithmetic lift of `Q`, built
+in the output phase. Both `Q` and the phase context `R` must be independent of
+`y0`. One application preserves the ket and `R`, removes `y0` from the
+path-variable list, and restarts the other reductions. The matcher does not
+expand a `SumMod2` nested inside one monomial.
 
 Qubit, monomial, polynomial, ket, and path-sum comparisons use `*_result`
 functions when metadata inconsistency must be distinguished from genuine

@@ -65,13 +65,15 @@ module Omega : sig
       transforms
 
       {[
-        1/4 y0 + 1/2 y0 Q_hat + R
+        1/4 y0 + 1/2 y0 Q + R
           -> 1/8 - 1/4 Q_hat + R
       ]}
 
-      where [Q_hat] is the arithmetic lift of [Q]. Each ANF monomial must be
-      represented by a separate phase term; an xor nested inside one monomial
-      is rejected conservatively. *)
+      At the input, each ANF monomial [Mi] of [Q] must be represented by a
+      separate [1/2 y0 Mi] phase term. At coefficient [1/2], the lift
+      corrections are integer phases and disappear modulo one. [Q_hat] is the
+      arithmetic lift of [Q], constructed for the reduced phase. An xor nested
+      inside one monomial is rejected conservatively. *)
 
   val omega :
     ?debug:bool ->

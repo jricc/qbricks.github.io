@@ -68,12 +68,16 @@ end
 
 module Omega = struct
   (* Amy's Omega rule eliminates an internal path variable y0 from
-       1/4 y0 + 1/2 y0 Q_hat + R
+       1/4 y0 + 1/2 y0 Q + R
      and replaces the phase by 1/8 - 1/4 Q_hat + R.
 
      Q is read in algebraic normal form (ANF): an xor of Boolean monomials.
      For example, Q = x0 xor (x1 y1) has the two ANF monomials x0 and x1 y1.
-     R must be independent of y0, and y0 must not occur in the ket. *)
+     Each input monomial Mi is represented by a separate 1/2 y0 Mi phase
+     term: at coefficient 1/2, the lift corrections are integer phases and
+     disappear modulo one. Q_hat, the arithmetic lift of Q, is constructed
+     only for the reduced phase. R must be independent of y0, and y0 must not
+     occur in the ket. *)
 
   (* Prevents the generic matcher from building Q with an unavailable symbol.
      An allowed variable is a non-negative input or a declared path variable,
@@ -138,7 +142,8 @@ module Omega = struct
         else
           match Monome.remove_result y0 phase_monome with
           | Error Monome.CannotRemoveQubitSum ->
-              (* Case: y0 occurs inside an unlifted xor. *)
+              (* Case: y0 occurs inside a nested SumMod2, which is not
+                 expanded by this matcher. *)
               None
           | Ok None ->
               (* Case: y0 is present but cannot be factored from this term. *)

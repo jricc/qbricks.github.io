@@ -271,15 +271,16 @@ La règle Omega d'Amy élimine une variable de chemin `y0` absente du ket lorsqu
 la phase a la forme suivante :
 
 ```text
-1/4 y0 + 1/2 y0 Q_hat + R  ->  1/8 - 1/4 Q_hat + R
+1/4 y0 + 1/2 y0 Q + R  ->  1/8 - 1/4 Q_hat + R
 ```
 
-`Q_hat` est le relèvement arithmétique d'un polynôme booléen `Q` écrit en forme
-normale algébrique, c'est-à-dire comme un XOR de monômes. Le contexte `R` et
-`Q` doivent être indépendants de `y0`. Une application préserve le ket et `R`,
+`Q` est un polynôme booléen écrit en forme normale algébrique, c'est-à-dire
+comme un XOR de monômes. À l'entrée, chaque monôme `Mi` de `Q` est représenté
+par un terme de phase distinct `1/2 y0 Mi`. `Q_hat` est le relèvement
+arithmétique de `Q`, construit dans la phase de sortie. Le contexte `R` et `Q`
+doivent être indépendants de `y0`. Une application préserve le ket et `R`,
 retire `y0` de la liste des variables de chemin, puis relance les autres
-réductions. Le matcher attend que l'XOR de l'ANF soit distribué en termes de
-phase distincts ; il ne développe pas un `SumMod2` imbriqué dans un monôme.
+réductions. Le matcher ne développe pas un `SumMod2` imbriqué dans un monôme.
 
 Les comparaisons de qubits, monômes, polynômes, kets et path-sums utilisent des
 fonctions `*_result` lorsqu'une incohérence de métadonnées doit être distinguée

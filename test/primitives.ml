@@ -722,11 +722,10 @@ let test_omega_preserves_context_for_path_product () =
       Alcotest.fail ("unexpected malformed path sum: " ^ message)
 
 let test_omega_reconstructs_lifted_xor () =
-  (* Q = x0 xor x1 has the integer lift
-       Q_hat = x0 + x1 - 2 x0 x1.
-     In 1/2 y0 Q_hat, the term -y0 x0 x1 is an integer and disappears from
-     the phase modulo one. Omega must nevertheless reconstruct the complete
-     lift in -1/4 Q_hat, including the term 1/2 x0 x1:
+  (* Q = x0 xor x1 is represented at the input by its separate ANF terms
+       1/2 y0 x0 + 1/2 y0 x1.
+     Omega constructs Q_hat = x0 + x1 - 2 x0 x1 for the reduced phase, so
+     -1/4 Q_hat includes the pair term 1/2 x0 x1:
        1/4 y0 + 1/2 y0 x0 + 1/2 y0 x1
        -> 1/8 + 3/4 x0 + 3/4 x1 + 1/2 x0 x1. *)
   let y0 = v 2 in
