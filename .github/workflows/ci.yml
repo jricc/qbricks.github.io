@@ -30,7 +30,7 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y libgmp-dev pkg-config
 
       - name: Install OCaml dependencies
-        run: opam install dune zarith landmarks benchmark lwt batteries logs menhir landmarks-ppx alcotest odoc
+        run: opam install . --deps-only --with-test --with-doc
 
       - name: Run opam lint
         run: opam lint
@@ -51,7 +51,7 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y libgmp-dev pkg-config
 
       - name: Install OCaml dependencies
-        run: opam install dune zarith landmarks benchmark lwt batteries logs menhir landmarks-ppx alcotest odoc
+        run: opam install . --deps-only --with-test --with-doc
 
       - name: Build project
         run: opam exec -- dune build
@@ -72,7 +72,7 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y libgmp-dev pkg-config
 
       - name: Install OCaml dependencies
-        run: opam install dune zarith landmarks benchmark lwt batteries logs menhir landmarks-ppx alcotest odoc
+        run: opam install . --deps-only --with-test --with-doc
 
       - name: Run primitive tests
         run: opam exec -- dune build @primitives
@@ -105,7 +105,7 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y libgmp-dev pkg-config
 
       - name: Install OCaml dependencies
-        run: opam install dune zarith landmarks benchmark lwt batteries logs menhir landmarks-ppx alcotest odoc
+        run: opam install . --deps-only --with-test --with-doc
 
       - name: Build documentation
         run: opam exec -- dune build @doc

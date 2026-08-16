@@ -31,7 +31,8 @@ SQbricks is composed of two complementary tools: **SQbricks-Lift (SQL)** and **S
 
 [Technical documentation](doc/SQbricks.en.md) |
 [Documentation technique](doc/SQbricks.md) |
-[Roadmap](ROADMAP.md)
+[Roadmap](ROADMAP.md) |
+[Changelog](CHANGELOG.md)
 
 ---
 
@@ -444,9 +445,9 @@ Execution time = 0.000054 seconds, Memory = 0.006890 MB
 |-----------------|--------------|-----------------------------------------------------------------------------|
 | Source Code     | `lib/`       | Core source code of **SQbricks**                                            |
 | Executable      | `bin/`       | Main entry point of **SQbricks**                                            |
-| Parser          | `parser/`    | Parsers for **OpenQASM circuits** and **Path-Sum specifications**           |
+| Parser          | `lib/`       | OpenQASM and Path-Sum lexers and parsers (`Lexer_*.mll`, `Parser_*.mly`)    |
 | Scripts         | `scripts/`   | Contains helper scripts: benchmarks (`benchmarks.sh`), equivalence checking with QCEC (`mqt-qcec-qiskit.py`), and Qiskit transpilation scripts |
-| Unit Tests      | `tests/`     | Test files for unit testing. Results are stored in `logs/`                  |
+| Unit Tests      | `test/`      | Test files for unit testing. Results are stored in `test/logs/`             |
 | Tools           | `tools/`     | External tool binaries used by SQbricks                                     |
 
 
@@ -456,10 +457,10 @@ Execution time = 0.000054 seconds, Memory = 0.006890 MB
 
 | Designation              | Location                           | Description                                                                 |
 |---------------------------|------------------------------------|-----------------------------------------------------------------------------|
-| Primitive Tests  | `tests/primitives.ml`        | Basic unit tests for primitive components                                   |
-| Functional (Unitary) | `tests/unitary.ml`, `tests/qiskit.ml` | Functional equivalence tests for **unitary circuits**          |
-| Functional (Hybrid)  | `tests/mbqc.ml` | Functional equivalence tests for **hybrid circuits**          |
-| Functional (Specifications) | `tests/verif.ml` | Functional tests for **specification-based verification** (Path-Sum)     |
+| Primitive Tests  | `test/primitives.ml`        | Basic unit tests for primitive components                                   |
+| Functional (Unitary) | `test/unitary.ml`, `test/qiskit.ml` | Functional equivalence tests for **unitary circuits**          |
+| Functional (Hybrid)  | `test/mbqc.ml` | Functional equivalence tests for **hybrid circuits**          |
+| Functional (Specifications) | `test/verif.ml` | Functional tests for **specification-based verification** (Path-Sum)     |
 
 ### Usage
 

@@ -1,6 +1,21 @@
 # TODO
 
-## Next: phase 4 correctness bugs
+## Next: release 0.1.0
+
+- [x] Declare the direct OCaml dependencies and test dependencies in the opam
+  package metadata.
+- [x] Make CI install dependencies from the package metadata.
+- [x] Correct obsolete repository paths in `README.md` and add `CHANGELOG.md`.
+- [x] Present 0.1.0 as a research prototype without a global performance-gain
+  claim while the post-HH large benchmark remains inconclusive.
+- [ ] Run the final unit tests and light-regression check on the release
+  commit; both must pass.
+- [ ] Run the selected large-regression check and review all functional
+  statuses. Treat resource-bound timing variation as documented experimental
+  uncertainty, not as evidence of a global performance gain.
+- [ ] Create and push the `0.1.0` tag after the final checks and CI pass.
+
+## Completed phase 4 correctness bugs
 
 - [x] Make `Path_sum_library` gate constructors return a ket with the declared
   circuit width for arbitrary valid wires, and reject overlapping controls and
@@ -12,7 +27,7 @@
 - [x] Implement the consistent path-variable renaming documented for
   `Ket.equal_result` and used by `Path_sum.equal_result`.
 
-## Then: phase 4 API and robustness bugs
+## Completed phase 4 API and robustness bugs
 
 - [x] Fix OpenQASM export with `one_creg=true` so it keeps the quantum register
   and circuit, and reject unsupported controlled gates without recursive
@@ -31,24 +46,14 @@
   large-benchmark slowdowns where the baseline and current gate counts are
   identical, notably in `owm`, `tele`, and `owm-vs-tele`, before changing their
   performance baselines.
-- [x] Reduce repeated HH candidate scans on `owm/gf2^9mult_89_413`: profiling
-  observed 3,596 `hh_aux` calls from 4 `HH.hh` calls in Sequence, and 1,798
-  `hh_aux` calls from 3 `HH.hh` calls in Parallel. The validated phase prefilter
-  preserves path-variable order and reduces the normalized Sequence-specific
-  cost by approximately 16%.
-- [x] Avoid two redundant polynomial simplifications during successive HH
-  reductions. `hh_aux` already simplifies the substituted phase and ket, and
-  the final phase simplification also handles an unsimplified `R`. On the
-  focused uninstrumented `owm/gf2^9mult_89_413` case, Sequence decreased from
-  `399.31 s` to `336.88 s` and Parallel from `232.86 s` to `203.17 s`.
+- [x] Consolidate HH candidate analysis, phase partition, and simplification
+  without changing the rule's matching semantics or public interface.
 - [ ] Profile the denominators and monomial counts received by `Poly.lift` on
   representative `1/4` and `1/8` cases before deciding whether to truncate
   dyadic lifts by degree.
-- [ ] Recheck the optimized HH implementation with the large `owm` regression
-  under stable machine conditions. The 2026-08-02 run improved the targeted
-  `gf2` cases, but remained inconclusive because unrelated cases close to the
-  600-second resource boundary became `OutOfMemory` or were skipped. Do not
-  update the large baseline from that run.
+- [x] Recheck the optimized HH implementation: unit tests and the light check
+  passed, while the large performance comparison remained inconclusive. Keep
+  the existing large baseline.
 - [ ] Make the large regression checker report a changed gate-count signature
   as a workload change instead of comparing its execution time with the old
   performance baseline.
