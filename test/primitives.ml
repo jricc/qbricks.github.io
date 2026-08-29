@@ -1948,6 +1948,26 @@ let test_variable_replacement_returns_typed_replacement () =
   | Ok None -> check bool "replacement expected" true false
   | Error (Rules.MalformedPathSum _) -> check bool "valid path sum" true false
 
+let test_variable_replacement_preserves_path_variable_names () =
+  (* Input:    phase = 1/4*y1, ket = |x0 + y0, y1>
+     Change:   y0' = x0 + y0
+     Expected: phase = 1/4*y1, ket = |y0, y1>
+
+     Reusing y0 avoids moving y1 in both the phase and the ket. *)
+  let phase = Prod (Scal div4, Qubit (v 3)) +++ Poly.empty in
+  let input : Path_sum.t =
+    { phase; ket = [| x0 ++ v 2; v 3 |]; path_var = [ 2; 3 ] }
+  in
+  let expected : Path_sum.t =
+    { phase; ket = [| v 2; v 3 |]; path_var = [ 2; 3 ] }
+  in
+  match Rules.Variable_replacement.variable_replacement input with
+  | Ok (Some output) ->
+      check string "path-variable names" (PSS.exact expected) (PSS.exact output)
+  | Ok None -> Alcotest.fail "expected a variable replacement"
+  | Error (Rules.MalformedPathSum message) ->
+      Alcotest.fail ("unexpected malformed path sum: " ^ message)
+
 let test_variable_replacement_returns_none () =
   let input : Path_sum.t =
     { phase = Poly.zero; ket = [| Qubit.Var 0 |]; path_var = [] }
@@ -2237,6 +2257,9 @@ let variable_replacement =
     ( "variable_replacement returns typed replacement",
       `Quick,
       test_variable_replacement_returns_typed_replacement );
+    ( "variable_replacement preserves path-variable names",
+      `Quick,
+      test_variable_replacement_preserves_path_variable_names );
     ( "variable_replacement returns none",
       `Quick,
       test_variable_replacement_returns_none );

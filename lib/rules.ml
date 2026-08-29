@@ -562,8 +562,6 @@ module Variable_replacement = struct
            "Rules.Variable_replacement.variable_replacement: path variable index below ket width")
     else if List.equal Int.equal ps.path_var [] then Ok None
     else
-      let new_y = ListBis.max_int ps.path_var + 1 in
-
       let rec iterate_over_qubits indice =
         if Int.equal indice width then Ok None
         else
@@ -573,10 +571,13 @@ module Variable_replacement = struct
                 match condition_to_substitute ~debug qubit_i indice ps with
                 | Error reduction_error -> Error reduction_error
                 | Ok (Some v) ->
+                    (* [condition_to_substitute] proves that [v] occurs only in
+                       this qubit. The change of variable [v' = qubit_i] can
+                       therefore keep the name [v]. For example,
+                       |x0 + y0, y1> becomes |y0, y1>. *)
                     Ok
                       (Some
-                         ( substitute_qubit_in_ket ps.ket (Var new_y) qubit_i,
-                           v ))
+                         (substitute_qubit_in_ket ps.ket (Var v) qubit_i, v))
                 | Ok None -> iterate_over_qubits (indice + 1))
             | _ -> iterate_over_qubits (indice + 1)
           in
@@ -585,14 +586,12 @@ module Variable_replacement = struct
 
       match iterate_over_qubits 0 with
       | Error reduction_error -> Error reduction_error
-      | Ok (Some (k, v)) ->
+      | Ok (Some (k, _)) ->
           let output : Path_sum.t =
             {
               phase = ps.phase;
               ket = k;
-              path_var =
-                List.sort_uniq Int.compare
-                  (new_y :: ListBis.remove v ps.path_var);
+              path_var = ps.path_var;
             }
           in
           Ok (Some (Rename.rename output))

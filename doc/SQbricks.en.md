@@ -295,5 +295,3 @@ the generated artifacts.
 - Validated behavior: Alcotest suites under `test/`.
 - Benchmark runners and formats: `scripts/benchmarks-light.sh`,
   `scripts/benchmarks-sqbricks.sh`, and `scripts/check-regression-large.sh`.
-- Project planning: [`ROADMAP.md`](../ROADMAP.md) and
-  [`TODO.md`](../TODO.md).

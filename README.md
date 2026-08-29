@@ -31,7 +31,6 @@ SQbricks is composed of two complementary tools: **SQbricks-Lift (SQL)** and **S
 
 [Technical documentation](doc/SQbricks.en.md) |
 [Documentation technique](doc/SQbricks.md) |
-[Roadmap](ROADMAP.md) |
 [Changelog](CHANGELOG.md)
 
 ---
