@@ -262,6 +262,10 @@ réduction. Une règle qui ne s'applique pas à un path-sum valide est distingu�
 d'un path-sum mal formé ; ce dernier remonte jusqu'à `Equiv` sous la forme
 `ErrorMalformedPathSum`.
 
+La réduction HH évite désormais plusieurs parcours redondants de la phase tout
+en conservant l'ordre des candidats, les conditions d'application et la
+transformation mathématique.
+
 Les comparaisons de qubits, monômes, polynômes, kets et path-sums utilisent des
 fonctions `*_result` lorsqu'une incohérence de métadonnées doit être distinguée
 d'une vraie inégalité.
@@ -277,6 +281,11 @@ d'entrée, sans produit ni autre variable de chemin dans le décalage. La
 substitution est appliquée à toute la phase et à tout le ket seulement si elle
 isole davantage de composantes de sortie. Cette restriction est une limite de
 l'implémentation actuelle, pas du changement de variable mathématique général.
+
+Lorsque cela est possible sans ambiguïté, le changement de variable réutilise
+une variable de chemin existante et évite un renommage global inutile. Cette
+optimisation ne change ni la condition de substitution ni la sémantique du
+path-sum.
 
 ## Prototype d'inspection
 

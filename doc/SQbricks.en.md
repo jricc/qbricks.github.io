@@ -248,6 +248,9 @@ execution; the original `Program.t` is not rewritten.
 rule that does not apply to a valid path sum is distinguished from a malformed
 path sum; the latter reaches `Equiv` as `ErrorMalformedPathSum`.
 
+HH reduction now avoids several redundant phase traversals while preserving
+the candidate order, matching conditions, and mathematical transformation.
+
 Qubit, monomial, polynomial, ket, and path-sum comparisons use `*_result`
 functions when metadata inconsistency must be distinguished from genuine
 inequality.
@@ -262,6 +265,10 @@ variable in the offset. The substitution is applied to the whole phase and ket
 only when it isolates more output components. This restriction is a limit of
 the current implementation, not of the general mathematical change of
 variable.
+
+When this can be done unambiguously, variable change reuses an existing path
+variable and avoids an unnecessary global renaming. This optimization changes
+neither the substitution condition nor the path-sum semantics.
 
 ## Inspection prototype
 
