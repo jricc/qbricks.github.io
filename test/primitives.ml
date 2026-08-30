@@ -294,6 +294,101 @@ let hh =
       `Quick,
       test_reduction_algorithm_reports_malformed_path_sum );
   ]
+
+let minimal_case_phase : Poly.t =
+  (* P = 1/4 y0*x0 + 1/2 y0*y1 + 1/4 y1*(1-x0).
+     This is the smallest direct instance of Amy's Case rule. *)
+  Prod (Scal div4, Prod (Qubit (v 1), Qubit x0))
+  +++ (Prod (Scal div2, Prod (Qubit (v 1), Qubit (v 2)))
+       +++ (Prod (Scal div4, Qubit (v 2))
+            +++ (Prod (Scal (3 /// 4), Prod (Qubit x0, Qubit (v 2)))
+                 +++ Poly.empty)))
+
+let apply_valid_case input =
+  match Rules.Case.case input with
+  | Ok output -> output
+  | Error (Rules.MalformedPathSum message) ->
+      Alcotest.fail ("unexpected malformed path sum: " ^ message)
+
+let test_case_reduces_minimal_identity () =
+  let input : Path_sum.t =
+    { phase = minimal_case_phase; ket = [| x0 |]; path_var = [ 1; 2 ] }
+  in
+  let expected : Path_sum.t =
+    { phase = p0; ket = [| x0 |]; path_var = [] }
+  in
+  check string "minimal Case identity" (PSS.exact expected)
+    (PSS.exact (apply_valid_case input))
+
+let test_case_preserves_phase_context () =
+  (* The rule removes only its interference pattern. An independent phase term
+     must remain unchanged. *)
+  let context = Prod (Scal div8, Qubit x0) +++ Poly.empty in
+  let input : Path_sum.t =
+    {
+      phase = Poly.merge context minimal_case_phase;
+      ket = [| x0 |];
+      path_var = [ 1; 2 ];
+    }
+  in
+  let expected : Path_sum.t =
+    { phase = context; ket = [| x0 |]; path_var = [] }
+  in
+  check string "phase context after Case" (PSS.exact expected)
+    (PSS.exact (apply_valid_case input))
+
+let test_case_applies_nonzero_substitutions () =
+  (* With x = x0, Q = Q' = x1, yi = y0 and yj = y1:
+     P = 1/4 yi*x + 1/2 yi*(yj + x1) + 1/4 yj*(1-x) + 1/2 yj*x1.
+     Both branches substitute an internal variable with x1 and reduce to
+     3/4*x1. *)
+  let phase =
+    Prod (Scal div4, Prod (Qubit (v 2), Qubit x0))
+    +++ (Prod (Scal div2, Prod (Qubit (v 2), Qubit (v 3)))
+         +++ (Prod (Scal div2, Prod (Qubit (v 2), Qubit x1))
+              +++ (Prod (Scal div4, Qubit (v 3))
+                   +++ (Prod
+                          (Scal (3 /// 4), Prod (Qubit x0, Qubit (v 3)))
+                        +++ (Prod (Scal div2, Prod (Qubit (v 3), Qubit x1))
+                             +++ Poly.empty)))))
+  in
+  let input : Path_sum.t =
+    { phase; ket = [| x0; x1 |]; path_var = [ 2; 3 ] }
+  in
+  let expected : Path_sum.t =
+    {
+      phase = Prod (Scal (3 /// 4), Qubit x1) +++ Poly.empty;
+      ket = [| x0; x1 |];
+      path_var = [];
+    }
+  in
+  check string "nonzero Case substitutions" (PSS.exact expected)
+    (PSS.exact (apply_valid_case input))
+
+let test_case_requires_internal_path_variables () =
+  (* y0 occurs in the ket, so it is observable rather than internal. Case must
+     leave the path sum unchanged. *)
+  let input : Path_sum.t =
+    { phase = minimal_case_phase; ket = [| v 1 |]; path_var = [ 1; 2 ] }
+  in
+  check string "non-internal Case variable" (PSS.exact input)
+    (PSS.exact (apply_valid_case input))
+
+let case_rule =
+  [
+    ( "case reduces its minimal identity",
+      `Quick,
+      test_case_reduces_minimal_identity );
+    ( "case preserves an independent phase context",
+      `Quick,
+      test_case_preserves_phase_context );
+    ( "case applies nonzero substitutions",
+      `Quick,
+      test_case_applies_nonzero_substitutions );
+    ( "case requires two internal path variables",
+      `Quick,
+      test_case_requires_internal_path_variables );
+  ]
 (* let out_1_qubit = [ 0 ]
 let out_2_qubits = [ 0; 1 ] *)
 (* 
@@ -3695,6 +3790,7 @@ let () =
       ("Poly Normalise", poly_normalize);
       (* ("Normalise Path Variables", normalise_path_var); *)
       ("HH", hh);
+      ("Case", case_rule);
       ("Path-sum equality", path_sum_equality);
       ("Path-sum initialization", path_sum_initialization);
       ("Path-sum substitution", path_sum_substitution);

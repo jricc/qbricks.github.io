@@ -353,6 +353,255 @@ module HH = struct
 
 end
 
+module Case = struct
+  type matched_case = {
+    condition_variable : int;
+    yi : int;
+    yj : int;
+    yi_substitution : Qubit.t;
+    yj_substitution : Qubit.t;
+  }
+
+  let is_odd_quarter coefficient =
+    Q.equal coefficient div4
+    || Q.equal coefficient divm4
+    || Q.equal coefficient (3 /// 4)
+    || Q.equal coefficient ((-3) /// 4)
+
+  let factor_out variable phase =
+    let rec aux remaining_phase factor =
+      if Poly.is_empty remaining_phase then Some (Poly.simplify factor)
+      else
+        let monome = Poly.find remaining_phase in
+        let remaining_phase = Poly.del remaining_phase in
+        if Monome.member variable monome then
+          match Monome.remove_result variable monome with
+          | Ok (Some quotient) -> aux remaining_phase Poly.(quotient ++ factor)
+          | Ok None | Error Monome.CannotRemoveQubitSum -> None
+        else aux remaining_phase factor
+    in
+    aux phase Poly.empty
+
+  let quarter_variables factor =
+    let rec aux remaining_factor variables =
+      if Poly.is_empty remaining_factor then
+        List.sort_uniq Int.compare variables
+      else
+        let monome = Monome.simplify (Poly.find remaining_factor) in
+        let remaining_factor = Poly.del remaining_factor in
+        let variables =
+          match monome with
+          | Monome.Prod
+              (Monome.Scal coefficient, Monome.Qubit (Qubit.Var variable))
+            when is_odd_quarter coefficient ->
+              variable :: variables
+          | _ -> variables
+        in
+        aux remaining_factor variables
+    in
+    aux factor []
+
+  let half_phase_to_boolean phase =
+    let rec aux remaining_phase boolean_expression =
+      if Poly.is_empty remaining_phase then
+        Some (Qubit.simplify boolean_expression)
+      else
+        let monome = Monome.simplify (Poly.find remaining_phase) in
+        let remaining_phase = Poly.del remaining_phase in
+        match monome with
+        | Monome.Scal coefficient when Q.equal coefficient Q.zero ->
+            aux remaining_phase boolean_expression
+        | Monome.Scal coefficient when Q.equal coefficient div2 ->
+            aux remaining_phase
+              (Qubit.SumMod2 (Qubit.One, boolean_expression))
+        | Monome.Prod (Monome.Scal coefficient, body)
+          when Q.equal coefficient div2 -> (
+            match Monome.to_qubit_result body with
+            | Ok boolean_term ->
+                aux remaining_phase
+                  (Qubit.SumMod2 (boolean_term, boolean_expression))
+            | Error _ -> None)
+        | _ -> None
+    in
+    aux (Poly.simplify phase) Qubit.Zero
+
+  let first_boolean_factor condition_variable factor =
+    let without_quarter_term =
+      Poly.(
+        Monome.Prod
+          ( Monome.Scal divm4,
+            Monome.Qubit (Qubit.Var condition_variable) )
+        ++ factor)
+    in
+    half_phase_to_boolean without_quarter_term
+
+  let second_boolean_factor condition_variable factor =
+    let without_case_terms =
+      Poly.(
+        Monome.Prod
+          ( Monome.Scal ((-3) /// 4),
+            Monome.Qubit (Qubit.Var condition_variable) )
+        ++ (Monome.Scal divm4 ++ factor))
+    in
+    half_phase_to_boolean without_case_terms
+
+  let solve_for variable equation =
+    let rec summands acc = function
+      | Qubit.SumMod2 (left, right) -> summands (summands acc left) right
+      | Qubit.Zero -> acc
+      | term -> term :: acc
+    in
+    let rec remove_variable found remaining_terms = function
+      | [] when found ->
+          Some
+            (Qubit.simplify
+               (List.fold_left
+                  (fun sum term -> Qubit.SumMod2 (term, sum))
+                  Qubit.Zero remaining_terms))
+      | [] -> None
+      | Qubit.Var candidate :: terms when Int.equal variable candidate ->
+          if found then None else remove_variable true remaining_terms terms
+      | term :: _ when Qubit.member variable term -> None
+      | term :: terms ->
+          remove_variable found (term :: remaining_terms) terms
+    in
+    remove_variable false [] (summands [] (Qubit.simplify equation))
+
+  let internal_path_variables (ps : Path_sum.t) =
+    List.filter
+      (fun path_variable -> not (Path_sum.Ket.member path_variable ps.ket))
+      ps.path_var
+
+  let condition_variable_is_valid (ps : Path_sum.t) condition_variable yi yj =
+    let width = Array.length ps.Path_sum.ket in
+    0 <= condition_variable
+    && not
+         (Int.equal condition_variable yi || Int.equal condition_variable yj)
+    &&
+    (condition_variable < width
+    || ListBis.member condition_variable ps.Path_sum.path_var Int.equal)
+
+  let rec first_match matcher = function
+    | [] -> None
+    | candidate :: candidates -> (
+        match matcher candidate with
+        | Some _ as matched -> matched
+        | None -> first_match matcher candidates)
+
+  let match_yj ps yi condition_variable first_equation yj =
+    if not (condition_variable_is_valid ps condition_variable yi yj) then None
+    else
+      match solve_for yj first_equation with
+      | None -> None
+      | Some yj_substitution -> (
+          match factor_out yj ps.phase with
+          | None -> None
+          | Some yj_factor -> (
+              match second_boolean_factor condition_variable yj_factor with
+              | None -> None
+              | Some second_equation ->
+                  let second_equation =
+                    Qubit.simplify
+                      (Qubit.substitute condition_variable second_equation
+                         Qubit.One)
+                  in
+                  match solve_for yi second_equation with
+                  | None -> None
+                  | Some yi_substitution ->
+                      Some
+                        {
+                          condition_variable;
+                          yi;
+                          yj;
+                          yi_substitution;
+                          yj_substitution;
+                        }))
+
+  let match_condition_variable ps internal_variables yi yi_factor
+      condition_variable =
+    match first_boolean_factor condition_variable yi_factor with
+    | None -> None
+    | Some first_equation ->
+        let first_equation =
+          Qubit.simplify
+            (Qubit.substitute condition_variable first_equation Qubit.Zero)
+        in
+        first_match
+          (match_yj ps yi condition_variable first_equation)
+          internal_variables
+
+  let match_yi (ps : Path_sum.t) internal_variables yi =
+    match factor_out yi ps.phase with
+    | None -> None
+    | Some yi_factor ->
+        first_match
+          (match_condition_variable ps internal_variables yi yi_factor)
+          (quarter_variables yi_factor)
+
+  let find_match (ps : Path_sum.t) =
+    let internal_variables = internal_path_variables ps in
+    first_match (match_yi ps internal_variables) internal_variables
+
+  let phase_without_variable phase variable =
+    match HH.extract_R phase variable with
+    | Some remaining_phase -> remaining_phase
+    | None -> Poly.zero
+
+  let branch_phase ~debug phase condition_variable condition_value
+      removed_variable substituted_variable substitution =
+    let remaining_phase = phase_without_variable phase removed_variable in
+    let selected_phase =
+      Poly.substitute ~debug condition_variable remaining_phase condition_value
+    in
+    let substitution =
+      Poly.of_qubit_2_pi ~debug (Qubit.simplify substitution)
+    in
+    Poly.simplify ~debug
+      (Poly.substitute_rules_hh ~debug selected_phase substituted_variable
+         substitution)
+
+  let combine_branches condition_variable zero_branch one_branch =
+    let condition = Monome.Qubit (Qubit.Var condition_variable) in
+    let condition_times_one = Poly.distribution condition one_branch in
+    let minus_condition_times_zero =
+      Poly.distribution ~s1:Q.minus_one condition zero_branch
+    in
+    Poly.simplify
+      (Poly.merge zero_branch
+         (Poly.merge condition_times_one minus_condition_times_zero))
+
+  let apply_match ?(debug = false) (ps : Path_sum.t) matched_case =
+    let zero_branch =
+      branch_phase ~debug ps.phase matched_case.condition_variable Qubit.Zero
+        matched_case.yi matched_case.yj matched_case.yj_substitution
+    in
+    let one_branch =
+      branch_phase ~debug ps.phase matched_case.condition_variable Qubit.One
+        matched_case.yj matched_case.yi matched_case.yi_substitution
+    in
+    let output : Path_sum.t =
+      {
+        phase =
+          combine_branches matched_case.condition_variable zero_branch
+            one_branch;
+        ket = ps.ket;
+        path_var =
+          HH.remove_matched_path_variables ps.path_var matched_case.yi
+            matched_case.yj;
+      }
+    in
+    if debug then printf "Rule_case.case, output =\n%s\n%!" (PSS.pretty output);
+    output
+
+  let case ?(debug = false) (ps : Path_sum.t) :
+      (Path_sum.t, reduction_error) result =
+    if debug then printf "Rule_case.case, input =\n%s\n%!" (PSS.pretty ps);
+    let normalized = { ps with phase = Poly.simplify ~debug ps.phase } in
+    match find_match normalized with
+    | None -> Ok ps
+    | Some matched_case -> Ok (apply_match ~debug normalized matched_case)
+end
+
 module Rename = struct
   (** [_string_update_pvs substitutions] converts a list of path variable
       substitutions to a string representation. Format:

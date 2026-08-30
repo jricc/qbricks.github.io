@@ -31,6 +31,7 @@
       including:
     - [Elim]
     - [HH]
+    - [Case]
     - [Variable_replacement]
 
     Additionally, the module includes:
@@ -100,6 +101,33 @@ module HH : sig
       The optional [y0_to_remove] parameter specifies which path variable to
       eliminate. If not provided, the rule will automatically select a suitable
       [y0]. *)
+end
+
+module Case : sig
+  (** This module implements Amy's [Case] reduction rule. The rule eliminates
+      two internal path variables by splitting the phase on one Boolean
+      variable and recombining the two reduced branches. *)
+
+  val case :
+    ?debug:bool -> Path_sum.t -> (Path_sum.t, reduction_error) result
+  (** [case ?debug ps] applies at most one [Case] reduction. It returns the
+      original path sum when the rule does not match.
+
+      The matched phase has the two equivalent forms:
+
+      {[
+        1/4 yi*x + 1/2 yi*(yj + Q) + R
+        = 1/4 yj*(1-x) + 1/2 yj*(yi + Q') + R'
+      ]}
+
+      where [yi] and [yj] are internal path variables. They are removed and the
+      new phase is:
+
+      {[
+        (1-x) * R[yj <- Q] + x * R'[yi <- Q']
+      ]}
+
+      The ket is unchanged because neither eliminated variable occurs in it. *)
 end
 
 module Rename : sig
