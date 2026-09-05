@@ -548,6 +548,10 @@ module Macros = struct
     ss ta -- h ta -- tt ta -- h ta -- sinv ta -- cx co ta -- ss ta -- h ta
     -- tinv ta -- h ta -- sinv ta -- cx co ta
 
+  (* Controlled-H decomposition from Feynman's SOP verifier. *)
+  let chdecomp_feynman co ta : t =
+    sinv ta -- h ta -- tinv ta -- cx co ta -- tt ta -- h ta -- ss ta
+
   let ccxoq2 co1 co2 ta : t =
     let output =
       h ta -- cx co2 ta -- tinv ta -- cx co1 ta -- tt ta -- cx co2 ta -- tinv ta

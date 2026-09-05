@@ -245,6 +245,12 @@ module Macros : sig
   val chdecomp : int -> int -> t
   (** [chdecomp control target] CH gate decomposition. *)
 
+  val chdecomp_feynman : int -> int -> t
+  (** [chdecomp_feynman control target] is the controlled-H decomposition used
+      by
+      {{:https://github.com/meamy/feynman/blob/979ed2b0137b4fa693f3fbc91fa1993362202f00/src/Analysis/SOP.hs#L272}
+        Feynman's SOP verifier}. *)
+
   val cz : int -> int -> t
   (** [cz control target] Controlled Z gate. *)
 

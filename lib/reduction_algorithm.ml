@@ -52,46 +52,58 @@ let reduction_algorithm ?(debug = false) input =
     | Ok state_hh ->
         if debug then
           printf "Reduction_algorithm, state_hh =\n%s\n\n" (PSS.pretty state_hh);
-        match
-          Rules.Variable_replacement.variable_replacement ~debug
-            state_hh
-        with
+        match Rules.Case.case ~debug state_hh with
         | Error reduction_error -> Error reduction_error
-        | Ok (Some state_replace) ->
+        | Ok state_case ->
             if debug then
-              printf "Reduction_algorithm, state_replace =\n%s\n\n"
-                (PSS.pretty state_replace);
-            aux state_replace
-        | Ok None ->
-            let state_fact =
-              let rec aux state_in =
-                let state_out =
-                  Rules.Variable_replacement.variable_replacement_factorisation
-                    state_in ~debug
-                in
-                if debug then
-                  printf "Reduction_algorithm.aux, state_out =\n%s\n\n"
-                    (PSS.pretty state_out);
-                let condition =
-                  _condition_to_continue state_in state_out ~debug
-                in
-                if debug then
-                  printf "Reduction_algorithm.aux, condition = %b\n\n" condition;
-                if condition then aux state_out else state_in
-              in
-              aux state_hh
+              printf "Reduction_algorithm, state_case =\n%s\n\n"
+                (PSS.pretty state_case);
+            (* A successful Case match removes two path variables. Restart so
+               simplification and HH can use the phase produced by Case. *)
+            if List.length state_case.path_var < List.length state_hh.path_var
+            then aux state_case
+            else continue_after_case acc state_case
+  and continue_after_case acc state_case =
+    match
+      Rules.Variable_replacement.variable_replacement ~debug state_case
+    with
+    | Error reduction_error -> Error reduction_error
+    | Ok (Some state_replace) ->
+        if debug then
+          printf "Reduction_algorithm, state_replace =\n%s\n\n"
+            (PSS.pretty state_replace);
+        aux state_replace
+    | Ok None ->
+        let state_fact =
+          let rec factorise state_in =
+            let state_out =
+              Rules.Variable_replacement.variable_replacement_factorisation
+                state_in ~debug
             in
             if debug then
-              printf "Reduction_algorithm, state_fact =\n%s\n\n"
-                (PSS.pretty state_fact);
-            let state_repl =
-              Rules.Variable_replacement.replace_not_path_var_by_var state_fact
+              printf "Reduction_algorithm.factorise, state_out =\n%s\n\n"
+                (PSS.pretty state_out);
+            let condition =
+              _condition_to_continue state_in state_out ~debug
             in
             if debug then
-              printf "Reduction_algorithm, state_repl =\n%s\n\n"
-                (PSS.pretty state_repl);
-            if _condition_to_continue acc state_repl then aux state_repl
-            else Ok state_repl
+              printf "Reduction_algorithm.factorise, condition = %b\n\n"
+                condition;
+            if condition then factorise state_out else state_in
+          in
+          factorise state_case
+        in
+        if debug then
+          printf "Reduction_algorithm, state_fact =\n%s\n\n"
+            (PSS.pretty state_fact);
+        let state_repl =
+          Rules.Variable_replacement.replace_not_path_var_by_var state_fact
+        in
+        if debug then
+          printf "Reduction_algorithm, state_repl =\n%s\n\n"
+            (PSS.pretty state_repl);
+        if _condition_to_continue acc state_repl then aux state_repl
+        else Ok state_repl
   in
   match aux input with
   | Ok output -> Ok (Rename.rename output)

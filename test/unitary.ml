@@ -64,6 +64,61 @@ let test_sqv_result ?(debug = true) ?(algo = Equiv.Sequence)
     (Equiv.result_to_string expected)
     (Equiv.result_to_string greeting)
 
+let case_clifford_t_identity =
+  (* Use SQbricks' existing controlled-H decomposition first. The motif test
+     below checks whether its generated path sum exposes Case. *)
+  let block =
+    x 0 -- tinv 1 -- chdecomp 0 1 -- x 0 -- tt 1 -- cx 0 1
+  in
+  block -- block
+
+let test_case_clifford_t_identity_exposes_case_motif () =
+  let executed = Program.execution case_clifford_t_identity in
+  let simplified = Rules.Simplification.simplify executed in
+  let after_hh =
+    match Rules.HH.hh simplified with
+    | Ok path_sum -> path_sum
+    | Error (Rules.MalformedPathSum message) ->
+        Alcotest.fail ("unexpected malformed path sum after HH: " ^ message)
+  in
+  let after_case =
+    match Rules.Case.case after_hh with
+    | Ok path_sum -> path_sum
+    | Error (Rules.MalformedPathSum message) ->
+        Alcotest.fail ("unexpected malformed path sum after Case: " ^ message)
+  in
+  (* A successful Case match eliminates exactly its two internal variables. *)
+  check int "path variables eliminated by Case" 2
+    (List.length after_hh.path_var - List.length after_case.path_var)
+
+let case_integration =
+  [
+    ( "existing and Feynman controlled-H decompositions are equivalent",
+      `Quick,
+      test_prog_equiv ~debug:false ~algo:Equiv.Sequence (chdecomp 0 1)
+        (chdecomp_feynman 0 1) );
+    ( "existing controlled-H decomposition is self-equivalent",
+      `Quick,
+      test_prog_equiv ~debug:false ~algo:Equiv.Sequence (chdecomp 0 1)
+        (chdecomp 0 1) );
+    ( "Feynman controlled-H decomposition is self-equivalent",
+      `Quick,
+      test_prog_equiv ~debug:false ~algo:Equiv.Sequence
+        (chdecomp_feynman 0 1)
+        (chdecomp_feynman 0 1) );
+    ( "circuit execution exposes a Case motif",
+      `Quick,
+      test_case_clifford_t_identity_exposes_case_motif );
+    ( "Clifford+T identity via Sequence",
+      `Quick,
+      test_prog_equiv ~debug:false ~algo:Equiv.Sequence
+        case_clifford_t_identity id );
+    ( "Clifford+T identity via Parallel",
+      `Quick,
+      test_prog_equiv ~debug:false ~algo:Equiv.Parallel
+        case_clifford_t_identity id );
+  ]
+
 let test_auto_inferred_outputs_remain_equivalent () =
   (* Reproduce the [-sq] automatic path: measurements determine which quantum
      wires are discarded, but are not passed to [Equiv] afterwards. *)
@@ -1961,4 +2016,5 @@ let () =
       ("Sub-Cir-Seq-Unit-Eq Into Feynman", unitary_into_feynman);
       ("Sub-Cir-Par-Unit-Eq", parallel);
       ("Global-Phase-Par-Unit-Eq", parallel_global_phase);
+      ("Case integration", case_integration);
     ]

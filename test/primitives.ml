@@ -320,6 +320,16 @@ let test_case_reduces_minimal_identity () =
   check string "minimal Case identity" (PSS.exact expected)
     (PSS.exact (apply_valid_case input))
 
+let test_reduction_algorithm_applies_case () =
+  let input : Path_sum.t =
+    { phase = minimal_case_phase; ket = [| x0 |]; path_var = [ 1; 2 ] }
+  in
+  let expected : Path_sum.t =
+    { phase = p0; ket = [| x0 |]; path_var = [] }
+  in
+  check string "Case through reduction algorithm" (PSS.exact expected)
+    (PSS.exact (reduce_valid_path_sum input))
+
 let test_case_preserves_phase_context () =
   (* The rule removes only its interference pattern. An independent phase term
      must remain unchanged. *)
@@ -379,6 +389,9 @@ let case_rule =
     ( "case reduces its minimal identity",
       `Quick,
       test_case_reduces_minimal_identity );
+    ( "reduction algorithm applies case",
+      `Quick,
+      test_reduction_algorithm_applies_case );
     ( "case preserves an independent phase context",
       `Quick,
       test_case_preserves_phase_context );
