@@ -611,10 +611,38 @@ let seq ?(debug = false) ?(inputs1 = []) ?(inputs2 = []) ?(outputs1 = [])
 let parallel ?(debug = false) ?(inputs1 = []) ?(inputs2 = []) ?(outputs1 = [])
     ?(outputs2 = []) ?(meas1 = []) ?(meas2 = []) ?(equivalence = SubCircuit)
     unitary1 unitary2 =
+  (* Temporary profile in the HH log: e.g. normalize_1 is measured separately
+     from separation_1. Reduction calls already have their own timers. *)
+  let profile_file = Sys.getenv_opt "SQBRICKS_PROFILE_HH_COST_FILE" in
+  let profile_step stage operation =
+    match profile_file with
+    | None -> operation ()
+    | Some file ->
+        let channel =
+          open_out_gen [ Open_wronly; Open_creat; Open_append; Open_text ]
+            0o644 file
+        in
+        Fun.protect
+          ~finally:(fun () -> close_out_noerr channel)
+          (fun () ->
+            fprintf channel "EQUIV_STEP_BEGIN pid=%d stage=%s\n%!"
+              (Unix.getpid ()) stage;
+            let wall_start = Unix.gettimeofday () in
+            let cpu_start = Sys.time () in
+            let result = operation () in
+            let cpu_s = Sys.time () -. cpu_start in
+            let wall_s = Unix.gettimeofday () -. wall_start in
+            fprintf channel
+              "EQUIV_STEP_END pid=%d stage=%s wall_s=%.6f cpu_s=%.6f\n%!"
+              (Unix.getpid ()) stage wall_s cpu_s;
+            result)
+  in
   if equivalence = FullCircuit then ErrorFullCircuitNotImplemented
   else
     match
-      parameters_preparation inputs1 inputs2 outputs1 outputs2 unitary1 unitary2
+      profile_step "parameters" (fun () ->
+          parameters_preparation inputs1 inputs2 outputs1 outputs2 unitary1
+            unitary2)
     with
   | Error result -> result
   | Ok
@@ -636,23 +664,30 @@ let parallel ?(debug = false) ?(inputs1 = []) ?(inputs2 = []) ?(outputs1 = [])
         not (check_observable_measurement outputs1 outputs2 meas1 meas2)
       then NotEquivDiffMeasurements
       else
-        match initialized_path_sum_for_equiv ~debug (Int.max 1 wq1) inits1 with
+        match
+          profile_step "initialize_1" (fun () ->
+              initialized_path_sum_for_equiv ~debug (Int.max 1 wq1) inits1)
+        with
         | Error result -> result
         | Ok input_state1 -> (
             match
-              initialized_path_sum_for_equiv ~debug (Int.max 1 wq2) inits2
+              profile_step "initialize_2" (fun () ->
+                  initialized_path_sum_for_equiv ~debug (Int.max 1 wq2) inits2)
             with
             | Error result -> result
             | Ok input_state2 ->
 
                 match
-                  execution_for_equiv ~debug ~input_state:input_state1 unitary1
+                  profile_step "execution_1" (fun () ->
+                      execution_for_equiv ~debug ~input_state:input_state1
+                        unitary1)
                 with
                 | Error result -> result
                 | Ok output_state1 -> (
                     match
-                      execution_for_equiv ~debug ~input_state:input_state2
-                        unitary2
+                      profile_step "execution_2" (fun () ->
+                          execution_for_equiv ~debug ~input_state:input_state2
+                            unitary2)
                     with
                     | Error result -> result
                     | Ok output_state2 -> (
@@ -663,14 +698,16 @@ let parallel ?(debug = false) ?(inputs1 = []) ?(inputs2 = []) ?(outputs1 = [])
                             | Error result -> result
                             | Ok output_state_reduced2 ->
                 match
-                  Rules.Variable_replacement.poly_normalized
-                    ~debug output_state_reduced1
+                  profile_step "normalize_1" (fun () ->
+                      Rules.Variable_replacement.poly_normalized
+                        ~debug output_state_reduced1)
                 with
                 | Error (Rules.MalformedPathSum _) -> ErrorMalformedPathSum
                 | Ok output_path_var_norm1 -> (
                     match
-                      Rules.Variable_replacement.poly_normalized
-                        ~debug output_state_reduced2
+                      profile_step "normalize_2" (fun () ->
+                          Rules.Variable_replacement.poly_normalized
+                            ~debug output_state_reduced2)
                     with
                     | Error (Rules.MalformedPathSum _) -> ErrorMalformedPathSum
                     | Ok output_path_var_norm2 ->
@@ -686,15 +723,17 @@ let parallel ?(debug = false) ?(inputs1 = []) ?(inputs2 = []) ?(outputs1 = [])
 
                         let check_separability () =
                           match
-                            separability_states output_path_var_norm1 outputs1
-                              wq1
+                            profile_step "separation_1" (fun () ->
+                                separability_states output_path_var_norm1
+                                  outputs1 wq1)
                           with
                           | Error result -> Error result
                           | Ok false -> Ok (Some Entanglement1)
                           | Ok true -> (
                               match
-                                separability_states output_path_var_norm2
-                                  outputs2 wq2
+                                profile_step "separation_2" (fun () ->
+                                    separability_states output_path_var_norm2
+                                      outputs2 wq2)
                               with
                               | Error result -> Error result
                               | Ok false -> Ok (Some Entanglement2)
@@ -711,9 +750,10 @@ let parallel ?(debug = false) ?(inputs1 = []) ?(inputs2 = []) ?(outputs1 = [])
                             | Ok None ->
                                 (* Entanglement of out and disc*)
                                 (match
-                                   path_sum_equal_for_equiv ~debug ~outputs1
-                                     ~outputs2 output_path_var_norm1
-                                     output_path_var_norm2
+                                   profile_step "comparison" (fun () ->
+                                       path_sum_equal_for_equiv ~debug ~outputs1
+                                         ~outputs2 output_path_var_norm1
+                                         output_path_var_norm2)
                                  with
                                 | Error result -> result
                                 | Ok true -> SubCircuitEquivalent
@@ -726,9 +766,11 @@ let parallel ?(debug = false) ?(inputs1 = []) ?(inputs2 = []) ?(outputs1 = [])
                                 res
                             | Ok None ->
                                 (match
-                                   path_sum_equal_for_equiv ~debug ~outputs1
-                                     ~outputs2 ~global_phase:true
-                                     output_path_var_norm1 output_path_var_norm2
+                                   profile_step "comparison" (fun () ->
+                                       path_sum_equal_for_equiv ~debug ~outputs1
+                                         ~outputs2 ~global_phase:true
+                                         output_path_var_norm1
+                                         output_path_var_norm2)
                                  with
                                 | Error result -> result
                                 | Ok true -> GlobalPhaseEquivalent

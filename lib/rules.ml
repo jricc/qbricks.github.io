@@ -237,35 +237,120 @@ module HH = struct
 
   let hh_aux y0 yi ?(debug = false) (ps : Path_sum.t) :
       (Path_sum.t option, reduction_error) result =
-    if debug then
-      printf "Rule_hh.hh_aux, y0 = y%d\n%!" (y0 - Array.length ps.ket);
-    if debug then printf "Rule_hh.hh_aux, ps =\n%!%s\n%!" (PSS.pretty ps);
-    let n = Array.length ps.ket in
-    if debug then
-      printf "Rule_hh.hh_aux, yi = y%d\n%!" (yi - Array.length ps.ket);
-    match partition_hh_phase ~debug ps.phase n y0 yi with
-    | Error reduction_error -> Error reduction_error
-    | Ok (q, r_with_yi, r_without_yi) ->
-        if debug then printf "Rule_hh.hh_aux, q = %s\n%!" (PS.pretty q n);
+    (* Temporary per-match profile. For y0*(yi + Q), record Q's size and
+       the substitution cost without printing or renaming the expressions. *)
+    let profile_channel =
+      match Sys.getenv_opt "SQBRICKS_PROFILE_HH_COST_FILE" with
+      | None -> None
+      | Some file ->
+          Some
+            (open_out_gen [ Open_wronly; Open_creat; Open_append; Open_text ]
+               0o644 file)
+    in
+    let profile_step stage operation =
+      match profile_channel with
+      | None -> operation ()
+      | Some channel ->
+          fprintf channel "HH_STEP_BEGIN pid=%d y0=%d yi=%d stage=%s\n%!"
+            (Unix.getpid ()) y0 yi stage;
+          let wall_start = Unix.gettimeofday () in
+          let cpu_start = Sys.time () in
+          let result = operation () in
+          let cpu_s = Sys.time () -. cpu_start in
+          let wall_s = Unix.gettimeofday () -. wall_start in
+          fprintf channel
+            "HH_STEP_END pid=%d y0=%d yi=%d stage=%s wall_s=%.6f cpu_s=%.6f\n%!"
+            (Unix.getpid ()) y0 yi stage wall_s cpu_s;
+          result
+    in
+    let profile_state stage (state : Path_sum.t) =
+      match profile_channel with
+      | None -> ()
+      | Some channel ->
+          (* |x0*(y0 xor y1)> has five nodes. Count below products too;
+             this is an expression size, not a measurement of heap memory. *)
+          let rec qubit_nodes = function
+            | Qubit.Zero | Qubit.One | Qubit.Var _ -> 1
+            | Qubit.Prod (left, right) | Qubit.SumMod2 (left, right) ->
+                1 + qubit_nodes left + qubit_nodes right
+          in
+          let ket_nodes =
+            Array.fold_left
+              (fun count qubit -> count + qubit_nodes qubit)
+              0 state.ket
+          in
+          fprintf channel
+            "HH_STATE pid=%d y0=%d yi=%d stage=%s path_vars=%d \
+             phase_terms=%d ket_nodes=%d\n%!"
+            (Unix.getpid ()) y0 yi stage (List.length state.path_var)
+            (Poly.size state.phase) ket_nodes
+    in
+    Fun.protect
+      ~finally:(fun () ->
+        match profile_channel with
+        | None -> ()
+        | Some channel -> close_out_noerr channel)
+      (fun () ->
         if debug then
-          printf "Rule_hh.hh_aux, ps.phase = %s\n%!" (PS.pretty ps.phase n);
-        let substituted_r_with_yi =
-          if Poly.is_empty r_with_yi then empty
-          else Poly.substitute_rules_hh r_with_yi yi q ~debug
-        in
-        let ps_output : Path_sum.t =
-          {
-            (* Simplifying after the merge also combines terms that become
-               equal across both parts. For example, substituting yi <- x0 in
-               [1/4*yi] and merging [1/4*x0] produces [1/2*x0]. *)
-            phase = simplify (Poly.merge substituted_r_with_yi r_without_yi);
-            ket =
-              Path_sum.Ket.substitute ps.ket yi
-                (qsimplify (Poly.to_qubit q));
-            path_var = remove_matched_path_variables ps.path_var y0 yi;
-          }
-        in
-        Ok (Some ps_output)
+          printf "Rule_hh.hh_aux, y0 = y%d\n%!" (y0 - Array.length ps.ket);
+        if debug then printf "Rule_hh.hh_aux, ps =\n%!%s\n%!" (PSS.pretty ps);
+        let n = Array.length ps.ket in
+        if debug then
+          printf "Rule_hh.hh_aux, yi = y%d\n%!" (yi - Array.length ps.ket);
+        profile_state "before" ps;
+        match
+          profile_step "partition" (fun () ->
+              partition_hh_phase ~debug ps.phase n y0 yi)
+        with
+        | Error reduction_error -> Error reduction_error
+        | Ok (q, r_with_yi, r_without_yi) ->
+            (match profile_channel with
+            | None -> ()
+            | Some channel ->
+                fprintf channel
+                  "HH_PARTITION pid=%d y0=%d yi=%d q_terms=%d \
+                   r_with_yi_terms=%d r_without_yi_terms=%d\n%!"
+                  (Unix.getpid ()) y0 yi (Poly.size q)
+                  (Poly.size r_with_yi) (Poly.size r_without_yi));
+            if debug then
+              printf "Rule_hh.hh_aux, q = %s\n%!" (PS.pretty q n);
+            if debug then
+              printf "Rule_hh.hh_aux, ps.phase = %s\n%!"
+                (PS.pretty ps.phase n);
+            let substituted_r_with_yi =
+              profile_step "phase_substitution" (fun () ->
+                  if Poly.is_empty r_with_yi then empty
+                  else Poly.substitute_rules_hh r_with_yi yi q ~debug)
+            in
+            (match profile_channel with
+            | None -> ()
+            | Some channel ->
+                fprintf channel
+                  "HH_SUBSTITUTED_PHASE pid=%d y0=%d yi=%d terms=%d\n%!"
+                  (Unix.getpid ()) y0 yi (Poly.size substituted_r_with_yi));
+            let phase =
+              (* Merge can combine terms across both parts:
+                 substituting yi <- x0 in 1/4*yi + 1/4*x0 gives 1/2*x0. *)
+              profile_step "phase_merge_simplify" (fun () ->
+                  simplify (Poly.merge substituted_r_with_yi r_without_yi))
+            in
+            let substitution_qubit =
+              profile_step "q_to_qubit" (fun () ->
+                  qsimplify (Poly.to_qubit q))
+            in
+            let ket =
+              profile_step "ket_substitution" (fun () ->
+                  Path_sum.Ket.substitute ps.ket yi substitution_qubit)
+            in
+            let ps_output : Path_sum.t =
+              {
+                phase;
+                ket;
+                path_var = remove_matched_path_variables ps.path_var y0 yi;
+              }
+            in
+            profile_state "after" ps_output;
+            Ok (Some ps_output))
 
   let hh ?(debug = false) ?(y0_to_remove = -1) (ps : Path_sum.t) :
       (Path_sum.t, reduction_error) result =
@@ -311,7 +396,22 @@ module HH = struct
         if width <= 0 then ps.path_var
         else path_variables_with_possible_yi ps.phase width
       in
-      aux ps candidates ps.path_var
+      let path_variables =
+        match Sys.getenv_opt "SQBRICKS_HH_REVERSE_ABSENT_ORDER" with
+        | Some "1" when 0 < width ->
+            let variables_in_ket = Ket.extract_path_var ps.ket in
+            let absent_from_ket, present_in_ket =
+              List.partition
+                (fun path_variable ->
+                  not (List.mem path_variable variables_in_ket))
+                ps.path_var
+            in
+            (* Experimental comparison only: [y0;y1;y2] absent from the ket
+               becomes [y2;y1;y0]; present variables keep their original order. *)
+            List.rev_append absent_from_ket present_in_ket
+        | _ -> ps.path_var
+      in
+      aux ps candidates path_variables
     else
       (* The user proposes y0. *)
       match analyze_y0 y0_to_remove ps with
