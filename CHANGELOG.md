@@ -2,6 +2,32 @@
 
 This file records the user-visible changes in SQbricks releases.
 
+## [0.1.1] - 2026-08-30
+
+SQbricks 0.1.1 keeps the public interfaces and reduction semantics of 0.1.0
+while reducing repeated work in path-sum reduction.
+
+### Performance
+
+- Analyze HH candidates in one traversal of the phase and partition a matched
+  phase once before substitution.
+- Reuse an existing path-variable name for eligible variable replacements,
+  avoiding an unnecessary whole-path-sum renaming step.
+
+### Reliability
+
+- Add focused tests for HH candidate order, repeated candidate pairs,
+  unauthorized coefficients, and preservation of phase terms independent of
+  the substituted variable.
+- Extend light regression coverage with teleportation adder and Grover cases.
+- Update selected large regression baselines after validated functional
+  improvements.
+
+### Known limitations
+
+- Performance remains dependent on the workload and reference machine. This
+  release does not claim a global speedup.
+
 ## [0.1.0] - 2026-08-08
 
 SQbricks 0.1.0 is the first release of the focused SQbricks repository. It is

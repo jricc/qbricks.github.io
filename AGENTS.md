@@ -348,6 +348,8 @@ Use the full quality process for non-trivial changes.
 - Tests should document the intended behavior.
 - If a test depends on randomness, fix the seed or justify why not.
 - If tests cannot be run, explain exactly why.
+- The Docker container does not provide `/usr/bin/time`. Use Bash `SECONDS`
+  for simple elapsed-time measurements or the existing benchmark timers.
 
 ## Documentation rules
 

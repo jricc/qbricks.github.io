@@ -253,6 +253,9 @@ and factorization. It then tries the Omega rule last. If Omega removes a path
 variable, the complete sequence starts again; otherwise the final path sum is
 renamed to use contiguous indices.
 
+HH reduction now avoids several redundant phase traversals while preserving
+the candidate order, matching conditions, and mathematical transformation.
+
 Amy's Omega rule removes a path variable `y0` that is absent from the ket when
 the phase has the following form:
 
@@ -282,6 +285,10 @@ variable in the offset. The substitution is applied to the whole phase and ket
 only when it isolates more output components. This restriction is a limit of
 the current implementation, not of the general mathematical change of
 variable.
+
+When this can be done unambiguously, variable change reuses an existing path
+variable and avoids an unnecessary global renaming. This optimization changes
+neither the substitution condition nor the path-sum semantics.
 
 ## Inspection prototype
 
@@ -315,5 +322,3 @@ the generated artifacts.
 - Validated behavior: Alcotest suites under `test/`.
 - Benchmark runners and formats: `scripts/benchmarks-light.sh`,
   `scripts/benchmarks-sqbricks.sh`, and `scripts/check-regression-large.sh`.
-- Project planning: [`ROADMAP.md`](../ROADMAP.md) and
-  [`TODO.md`](../TODO.md).

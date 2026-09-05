@@ -267,6 +267,10 @@ variable et la factorisation. Elle essaie ensuite la règle Omega en dernier. Si
 Omega élimine une variable de chemin, la séquence complète reprend ; sinon le
 path-sum final est renommé dans une numérotation contiguë.
 
+La réduction HH évite désormais plusieurs parcours redondants de la phase tout
+en conservant l'ordre des candidats, les conditions d'application et la
+transformation mathématique.
+
 La règle Omega d'Amy élimine une variable de chemin `y0` absente du ket lorsque
 la phase a la forme suivante :
 
@@ -297,6 +301,11 @@ d'entrée, sans produit ni autre variable de chemin dans le décalage. La
 substitution est appliquée à toute la phase et à tout le ket seulement si elle
 isole davantage de composantes de sortie. Cette restriction est une limite de
 l'implémentation actuelle, pas du changement de variable mathématique général.
+
+Lorsque cela est possible sans ambiguïté, le changement de variable réutilise
+une variable de chemin existante et évite un renommage global inutile. Cette
+optimisation ne change ni la condition de substitution ni la sémantique du
+path-sum.
 
 ## Prototype d'inspection
 
@@ -331,5 +340,3 @@ parcourir les artefacts produits.
 - Comportements validés : tests Alcotest dans `test/`.
 - Runners et formats de benchmark : `scripts/benchmarks-light.sh`,
   `scripts/benchmarks-sqbricks.sh` et `scripts/check-regression-large.sh`.
-- Planification du projet : [`ROADMAP.md`](../ROADMAP.md) et
-  [`TODO.md`](../TODO.md).

@@ -1,43 +1,43 @@
 Program;Tool;Version;Lift;Opt;CH;CS;CZ;CCZ;CCX;CU1;Gates;Time
-dqc_pe_21;SQbricks;2025;lifting;Sequence;0;21;4401;0;0;208;11217;496,929014
+dqc_pe_21;SQbricks;2025;lifting;Sequence;0;21;4401;0;0;208;11217;307,554076
 dqc_pe_21;SQbricks;2025;lifting;Parallel;0;21;4401;0;0;208;11217;SubCircuitInconclusive
 
-dqc_pe_22;SQbricks;2025;lifting;Sequence;0;22;4821;0;0;229;12283;OutOfMemory
+dqc_pe_22;SQbricks;2025;lifting;Sequence;0;22;4821;0;0;229;12283;1075,768966
 dqc_pe_22;SQbricks;2025;lifting;Parallel;0;22;4821;0;0;229;12283;SubCircuitInconclusive
 
-dqc_pe_23;SQbricks;2025;lifting;Sequence;0;23;5260;0;0;251;13397;SKIP_AFTER_RESOURCE_FAILURE
+dqc_pe_23;SQbricks;2025;lifting;Sequence;0;23;5260;0;0;251;13397;615,636270
 dqc_pe_23;SQbricks;2025;lifting;Parallel;0;23;5260;0;0;251;13397;SubCircuitInconclusive
 
-dqc_pe_24;SQbricks;2025;lifting;Sequence;0;24;5718;0;0;274;14559;SKIP_AFTER_RESOURCE_FAILURE
+dqc_pe_24;SQbricks;2025;lifting;Sequence;0;24;5718;0;0;274;14559;531,812941
 dqc_pe_24;SQbricks;2025;lifting;Parallel;0;24;5718;0;0;274;14559;SubCircuitInconclusive
 
-dqc_qft_23;SQbricks;2025;lifting;Sequence;0;22;4830;0;0;231;12259;405,608524
-dqc_qft_23;SQbricks;2025;lifting;Parallel;0;22;4830;0;0;231;12259;SubCircuitInconclusive
+dqc_qft_23;SQbricks;2025;lifting;Sequence;0;22;4830;0;0;231;12259;353,839049
+dqc_qft_23;SQbricks;2025;lifting;Parallel;0;22;4830;0;0;231;12259;211,178450
 
-dqc_qft_24;SQbricks;2025;lifting;Sequence;0;23;5268;0;0;253;13368;OutOfMemory
-dqc_qft_24;SQbricks;2025;lifting;Parallel;0;23;5268;0;0;253;13368;SubCircuitInconclusive
+dqc_qft_24;SQbricks;2025;lifting;Sequence;0;23;5268;0;0;253;13368;388,980650
+dqc_qft_24;SQbricks;2025;lifting;Parallel;0;23;5268;0;0;253;13368;264,793268
 
-dqc_qft_25;SQbricks;2025;lifting;Sequence;0;24;5725;0;0;276;14525;SKIP_AFTER_RESOURCE_FAILURE
-dqc_qft_25;SQbricks;2025;lifting;Parallel;0;24;5725;0;0;276;14525;SubCircuitInconclusive
+dqc_qft_25;SQbricks;2025;lifting;Sequence;0;24;5725;0;0;276;14525;452,094554
+dqc_qft_25;SQbricks;2025;lifting;Parallel;0;24;5725;0;0;276;14525;280,667516
 
-dqc_qft_26;SQbricks;2025;lifting;Sequence;0;25;6201;0;0;300;15730;SKIP_AFTER_RESOURCE_FAILURE
-dqc_qft_26;SQbricks;2025;lifting;Parallel;0;25;6201;0;0;300;15730;SubCircuitInconclusive
+dqc_qft_26;SQbricks;2025;lifting;Sequence;0;25;6201;0;0;300;15730;567,015582
+dqc_qft_26;SQbricks;2025;lifting;Parallel;0;25;6201;0;0;300;15730;354,086969
 
-dqc_bitflip_code_corrected;SQbricks;2025;lifting;Sequence;0;0;189;0;3;0;462;0,432474
-dqc_bitflip_code_corrected;SQbricks;2025;lifting;Parallel;0;0;189;0;3;0;462;0,254757
+dqc_bitflip_code_corrected;SQbricks;2025;lifting;Sequence;0;0;1833;0;24;27;4632;49,388925
+dqc_bitflip_code_corrected;SQbricks;2025;lifting;Parallel;0;0;1833;0;24;27;4632;32,435423
 
-dqc_phaseflip_code_corrected;SQbricks;2025;lifting;Sequence;0;3;221;0;2;0;544;0,576736
-dqc_phaseflip_code_corrected;SQbricks;2025;lifting;Parallel;0;3;221;0;2;0;544;0,357069
+dqc_phaseflip_code_corrected;SQbricks;2025;lifting;Sequence;0;9;531;0;6;0;1330;3,001954
+dqc_phaseflip_code_corrected;SQbricks;2025;lifting;Parallel;0;9;531;0;6;0;1330;2,274532
 
-dqc_state_injection_S;SQbricks;2025;lifting;Sequence;0;0;15;0;0;0;38;0,004411
-dqc_state_injection_S;SQbricks;2025;lifting;Parallel;0;0;15;0;0;0;38;0,002190
+dqc_state_injection_S;SQbricks;2025;lifting;Sequence;0;0;15;0;0;0;38;0,002275
+dqc_state_injection_S;SQbricks;2025;lifting;Parallel;0;0;15;0;0;0;38;0,001792
 
-dqc_state_injection_T;SQbricks;2025;lifting;Sequence;0;1;26;0;0;0;67;0,009137
-dqc_state_injection_T;SQbricks;2025;lifting;Parallel;0;1;26;0;0;0;67;0,004861
+dqc_state_injection_T;SQbricks;2025;lifting;Sequence;0;1;26;0;0;0;67;0,005364
+dqc_state_injection_T;SQbricks;2025;lifting;Parallel;0;1;26;0;0;0;67;0,003744
 
-dqc_teleportation;SQbricks;2025;lifting;Sequence;0;0;25;0;0;0;62;0,010846
-dqc_teleportation;SQbricks;2025;lifting;Parallel;0;0;25;0;0;0;62;SubCircuitInconclusive
+dqc_teleportation;SQbricks;2025;lifting;Sequence;0;0;25;0;0;0;62;0,004771
+dqc_teleportation;SQbricks;2025;lifting;Parallel;0;0;25;0;0;0;62;0,003243
 
-shor_n5_ancillas;SQbricks;2025;lifting;Sequence;0;2;733;0;5;4;1836;23,320254
-shor_n5_ancillas;SQbricks;2025;lifting;Parallel;0;2;733;0;5;4;1836;SubCircuitInconclusive
+shor_n5_ancillas;SQbricks;2025;lifting;Sequence;0;1;1021;0;9;9;2564;13,147453
+shor_n5_ancillas;SQbricks;2025;lifting;Parallel;0;1;1021;0;9;9;2564;SubCircuitInconclusive
 

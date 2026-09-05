@@ -1,19 +1,19 @@
 Program;Tool;Version;Lift;Opt;CH;CS;CZ;CCZ;CCX;CU1;Gates;Time
 adder_8;SQbricks;2025;lifting;Parallel;0;0;3574;0;57;0;9399;OutOfMemory
 
-barenco_tof_4;SQbricks;2025;lifting;Parallel;0;0;457;0;8;0;1228;1,795664
+barenco_tof_4;SQbricks;2025;lifting;Parallel;0;0;457;0;8;0;1228;1,576474
 
-barenco_tof_5;SQbricks;2025;lifting;Parallel;0;0;683;0;12;0;1828;4,145212
+barenco_tof_5;SQbricks;2025;lifting;Parallel;0;0;683;0;12;0;1828;3,220927
 
-barenco_tof_10;SQbricks;2025;lifting;Parallel;0;0;1813;0;32;0;4828;32,825831
+barenco_tof_10;SQbricks;2025;lifting;Parallel;0;0;1813;0;32;0;4828;25,783281
 
-csla_mux_3;SQbricks;2025;lifting;Parallel;0;0;685;0;10;0;1830;5,376325
+csla_mux_3;SQbricks;2025;lifting;Parallel;0;0;685;0;10;0;1830;4,116092
 
 csum_mux_9;SQbricks;2025;lifting;Parallel;0;0;1598;0;28;0;4352;OutOfMemory
 
-gf2^9_mult;SQbricks;2025;lifting;Parallel;0;0;4556;0;81;0;11922;230,705319
+gf2^9_mult;SQbricks;2025;lifting;Parallel;0;0;4556;0;81;0;11922;179,102321
 
-gf2^10_mult;SQbricks;2025;lifting;Parallel;0;0;5613;0;100;0;14669;352,474693
+gf2^10_mult;SQbricks;2025;lifting;Parallel;0;0;5613;0;100;0;14669;297,498787
 
 gf2^16_mult;SQbricks;2025;lifting;Parallel;0;0;14415;0;256;0;37445;OutOfMemory
 
@@ -23,19 +23,19 @@ grover_5_feynman;SQbricks;2025;lifting;Parallel;0;0;2791;0;48;0;7710;OutOfMemory
 
 ham15-high;SQbricks;2025;lifting;Parallel;0;0;20242;0;351;0;53945;OutOfMemory
 
-ham15-low;SQbricks;2025;lifting;Parallel;0;0;1818;0;23;0;4676;34,714368
+ham15-low;SQbricks;2025;lifting;Parallel;0;0;1818;0;23;0;4676;24,741313
 
-ham15-med;SQbricks;2025;lifting;Parallel;0;0;4901;0;82;0;13028;301,466607
+ham15-med;SQbricks;2025;lifting;Parallel;0;0;4901;0;82;0;13028;221,602186
 
-hwb6;SQbricks;2025;lifting;Parallel;0;0;992;0;15;0;2624;79,826133
+hwb6;SQbricks;2025;lifting;Parallel;0;0;992;0;15;0;2624;66,549478
 
-mod5_4;SQbricks;2025;lifting;Parallel;0;0;251;0;4;0;674;0,502289
+mod5_4;SQbricks;2025;lifting;Parallel;0;0;251;0;4;0;674;0,355727
 
 mod_adder_1024;SQbricks;2025;lifting;Parallel;0;0;16323;0;285;0;43598;OutOfMemory
 
-mod_mult_55;SQbricks;2025;lifting;Parallel;0;0;438;0;7;0;1200;1,849662
+mod_mult_55;SQbricks;2025;lifting;Parallel;0;0;438;0;7;0;1200;1,241975
 
-mod_red_21;SQbricks;2025;lifting;Parallel;0;0;991;0;17;0;2711;157,651598
+mod_red_21;SQbricks;2025;lifting;Parallel;0;0;991;0;17;0;2711;147,137071
 
 qcla_adder_10;SQbricks;2025;lifting;Parallel;0;0;2101;0;34;0;5613;OutOfMemory
 
@@ -45,33 +45,33 @@ qcla_mod_7;SQbricks;2025;lifting;Parallel;0;0;3493;0;59;0;9266;OutOfMemory
 
 qft_4;SQbricks;2025;lifting;Parallel;0;0;558;0;2;0;1668;SubCircuitInconclusive
 
-rc_adder_6;SQbricks;2025;lifting;Parallel;0;0;776;0;11;0;2069;98,024360
+rc_adder_6;SQbricks;2025;lifting;Parallel;0;0;776;0;11;0;2069;108,235741
 
-tof_4;SQbricks;2025;lifting;Parallel;0;0;292;0;5;0;802;0,590420
+tof_4;SQbricks;2025;lifting;Parallel;0;0;292;0;5;0;802;0,495716
 
-tof_5;SQbricks;2025;lifting;Parallel;0;0;408;0;7;0;1118;1,206567
+tof_5;SQbricks;2025;lifting;Parallel;0;0;408;0;7;0;1118;1,015662
 
-tof_10;SQbricks;2025;lifting;Parallel;0;0;988;0;17;0;2698;8,577170
+tof_10;SQbricks;2025;lifting;Parallel;0;0;988;0;17;0;2698;7,350708
 
-vbe_adder_3;SQbricks;2025;lifting;Parallel;0;0;620;0;10;0;1640;3,110244
+vbe_adder_3;SQbricks;2025;lifting;Parallel;0;0;620;0;10;0;1640;2,722952
 
-adder_n13;SQbricks;2025;lifting;Parallel;0;0;477;0;8;0;1222;10,508629
+adder_n13;SQbricks;2025;lifting;Parallel;0;0;477;0;8;0;1222;11,035530
 
-adder_n16;SQbricks;2025;lifting;Parallel;0;0;596;0;10;0;1526;258,642610
+adder_n16;SQbricks;2025;lifting;Parallel;0;0;596;0;10;0;1526;291,530746
 
 adder_n19;SQbricks;2025;lifting;Parallel;0;0;715;0;12;0;1830;OutOfMemory
 
 adder_n22;SQbricks;2025;skipped;Skip;;;;;;;;SKIP_AFTER_RESOURCE_FAILURE
 
-bv_98;SQbricks;2025;lifting;Parallel;0;0;779;0;0;0;2637;3,959447
+bv_98;SQbricks;2025;lifting;Parallel;0;0;779;0;0;0;2637;3,186379
 
-bv_99;SQbricks;2025;lifting;Parallel;0;0;787;0;0;0;2664;3,931432
+bv_99;SQbricks;2025;lifting;Parallel;0;0;787;0;0;0;2664;3,203556
 
-bv_100;SQbricks;2025;lifting;Parallel;0;0;795;0;0;0;2691;4,070733
+bv_100;SQbricks;2025;lifting;Parallel;0;0;795;0;0;0;2691;3,406912
 
-grover_3;SQbricks;2025;lifting;Parallel;0;0;71;0;1;0;219;0,038089
+grover_3;SQbricks;2025;lifting;Parallel;0;0;71;0;1;0;219;0,030228
 
-grover_5;SQbricks;2025;lifting;Parallel;0;0;230;0;4;0;635;SubCircuitInconclusive
+grover_5;SQbricks;2025;lifting;Parallel;0;0;230;0;4;0;635;0,498632
 
 grover_7;SQbricks;2025;lifting;Parallel;0;0;447;0;8;0;1194;OutOfMemory
 
@@ -81,23 +81,23 @@ pe_25;SQbricks;2025;lifting;Parallel;0;25;6221;0;0;298;15927;SubCircuitInconclus
 
 pe_26;SQbricks;2025;lifting;Parallel;0;26;6718;0;0;323;17191;SubCircuitInconclusive
 
-pe_27;SQbricks;2025;lifting;Parallel;0;27;7234;0;0;349;18503;OutOfMemory
+pe_27;SQbricks;2025;lifting;Parallel;0;27;7234;0;0;349;18503;SubCircuitInconclusive
 
-pe_28;SQbricks;2025;skipped;Skip;;;;;;;;SKIP_AFTER_RESOURCE_FAILURE
+pe_28;SQbricks;2025;lifting;Parallel;0;28;7769;0;0;376;19863;SubCircuitInconclusive
 
-qft_26;SQbricks;2025;lifting;Parallel;0;25;6227;0;0;300;15886;SubCircuitInconclusive
+qft_26;SQbricks;2025;lifting;Parallel;0;25;6227;0;0;300;15886;324,622267
 
-qft_27;SQbricks;2025;lifting;Parallel;0;26;6723;0;0;325;17145;SubCircuitInconclusive
+qft_27;SQbricks;2025;lifting;Parallel;0;26;6723;0;0;325;17145;381,068039
 
-qft_28;SQbricks;2025;lifting;Parallel;0;27;7238;0;0;351;18452;SubCircuitInconclusive
+qft_28;SQbricks;2025;lifting;Parallel;0;27;7238;0;0;351;18452;445,050929
 
-qft_29;SQbricks;2025;lifting;Parallel;0;28;7772;0;0;378;19807;OutOfMemory
+qft_29;SQbricks;2025;lifting;Parallel;0;28;7772;0;0;378;19807;517,949557
 
-gf2^10mult_109_509;SQbricks;2025;lifting;Parallel;0;0;5375;0;100;0;13479;288,324115
+gf2^10mult_109_509;SQbricks;2025;lifting;Parallel;0;0;5375;0;100;0;13479;227,497443
 
-gf2^11mult_131_615;SQbricks;2025;lifting;Parallel;0;0;6496;0;121;0;16280;427,750297
+gf2^11mult_131_615;SQbricks;2025;lifting;Parallel;0;0;6496;0;121;0;16280;342,139405
 
-gf2^12mult_177_753;SQbricks;2025;lifting;Parallel;0;0;7833;0;144;0;19587;629,388837
+gf2^12mult_177_753;SQbricks;2025;lifting;Parallel;0;0;7833;0;144;0;19587;502,850572
 
 gf2^13mult_205_881;SQbricks;2025;lifting;Parallel;0;0;9176;0;169;0;22938;OutOfMemory
 
